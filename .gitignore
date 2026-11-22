@@ -1,0 +1,29 @@
+# Virtual environment & Dependencies
+.venv/
+venv/
+env/
+node_modules/
+__pycache__/
+*.pyc
+
+# Chrome profile data (sensitive/session cookies)
+chrome_profile/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Local media storage (keep structure, ignore images)
+storage/raw/*
+storage/transparent/*
+storage/output/*
+!storage/raw/.gitkeep
+!storage/transparent/.gitkeep
+!storage/output/.gitkeep
+storage/jobs.json
+
+# Environment variables & system files
+.env
+.DS_Store
+Thumbs.db
