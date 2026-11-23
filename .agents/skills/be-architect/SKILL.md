@@ -1,25 +1,36 @@
 ---
 name: be-architect
-description: Backend Architect & Python DAG Engine Specialist chuyên thiết kế REST API bằng FastAPI, động cơ duyệt đồ thị Topological Sort, mô hình Plugin BaseNode độc lập, xử lý bất đồng bộ asyncio và media pipelines.
+description: Backend Architect & Python DAG Engine Specialist specializing in FastAPI REST API design, Topological Sort execution, decoupled BaseNode plugin pattern, asyncio event loops, and media processing pipelines.
 ---
 
 # Backend Architect & Engineering Skill
 
-Skill này định hình tiêu chuẩn phát triển Backend Engine cho Studio Flow (`D:\learn\studio\server`).
+This skill defines the technical standards for the backend engine of Studio Flow (`D:\learn\studio\server`).
 
-## Nguyên Tắc Cốt Lõi (Non-Negotiable Rules)
-1. **Kiến Trúc Plugin Độc Lập (Plugin Registry Pattern)**:
-   - Mọi Node mới phải kế thừa từ `BaseNode` trong `server/nodes/base_node.py`.
-   - Node chỉ nhận `inputs` và `context`, trả về `outputs` dạng Dict.
-   - Không được phép sửa code lõi server khi thêm node mới; đăng ký thông qua `NODE_REGISTRY`.
-2. **Dynamic DAG Execution (Không Hardcode Thứ Tự)**:
-   - Mọi luồng chạy phải do `DAGRunner` điều phối theo thuật toán **Topological Sort**.
-   - Hỗ trợ phân nhánh song song qua `asyncio.gather` cho các node trong cùng tầng.
-   - Tôn trọng cờ `isBypassed` để chuyển tiếp dữ liệu xuyên qua node mà không chặn luồng.
-3. **Quản Lý Bất Đồng Bộ & Xử Lý Ảnh**:
-   - Tác vụ CPU-bound (BiRefNet, Pillow, OpenCV) phải chạy trong `loop.run_in_executor()`.
-   - Bắt và lưu ảnh từ Chrome Gemini qua CDP bằng Canvas DataURL hoặc Element Screenshot để tránh bị chặn CSP.
-   - File lưu trữ theo thư mục chuẩn: `storage/raw`, `storage/transparent`, `storage/output`.
-4. **Data Contract & REST API**:
-   - Mọi endpoint trả về mã lỗi HTTP rõ ràng (`400`, `404`, `500`) kèm thông điệp chi tiết.
-   - Giữ tài liệu API tích hợp tiếng Anh cập nhật trong `docs/API_INTEGRATION_GUIDE.md`.
+## Core Principles & Non-Negotiable Rules
+
+1. **Decoupled Plugin Architecture (Plugin Registry Pattern)**:
+   - Every node must inherit from `BaseNode` in `server/nodes/base_node.py`.
+   - Nodes consume `inputs` and `context`, and return an `outputs` dictionary.
+   - Core server files must not be altered when adding a new node; register via `NODE_REGISTRY`.
+
+2. **Dynamic DAG Execution (No Hardcoded Ordering)**:
+   - Execution order is dynamically resolved by `DAGRunner` via **Topological Sort (Kahn's Algorithm)**.
+   - Support concurrent level execution using `asyncio.gather`.
+   - Adhere to the `isBypassed` flag to pass inputs through to outputs without breaking flow continuity.
+
+3. **Async Task Management & Media Handling**:
+   - CPU-bound operations (BiRefNet AI, Pillow image manipulation, OpenCV) must execute within `loop.run_in_executor()`.
+   - Extract raw generated images from Gemini Chrome via CDP using Canvas DataURL or element screenshotting to bypass CSP restrictions.
+   - Store assets under standardized directories: `storage/raw`, `storage/transparent`, `storage/output`.
+
+4. **Data Contracts & REST API**:
+   - Provide standard HTTP status codes (`400`, `404`, `500`) with actionable error payloads.
+   - Maintain API reference documentation in English under `docs/API_INTEGRATION_GUIDE.md`.
+
+## Quality & Definition of Done Checklist
+- [ ] Every new node extends `BaseNode` and registers in `NODE_REGISTRY`.
+- [ ] DAG execution resolved through `DAGRunner` Topological Sort (zero hardcoded order).
+- [ ] CPU-bound tasks delegated to executor thread pools (`loop.run_in_executor`).
+- [ ] Strict adherence to `initial_payload` prompt overrides over static canvas defaults.
+- [ ] REST API endpoints verified via automated tests or cURL before shipping.

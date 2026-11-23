@@ -1,25 +1,35 @@
 ---
 name: ba-analyst
-description: Business Analyst & System Planner chuyên phân tích yêu cầu, xây dựng User Story, Acceptance Criteria, sơ đồ workflow, dữ liệu Data Contract và lập kế hoạch thực thi chi tiết trước khi code.
+description: Business Analyst & System Planner specializing in requirement breakdown, User Stories, Acceptance Criteria, workflow diagrams, Data Contracts, and step-by-step implementation roadmaps before coding.
 ---
 
-# BA Analyst & System Planner Skill
+# Business Analyst & System Planner Skill
 
-Skill này đóng vai trò là Business Analyst & Product Architect cho dự án Studio Flow.
+This skill defines the responsibilities and standards of the Business Analyst & Product Architect role in the Studio Flow project (`D:\learn\studio`).
 
-## Nhiệm Vụ Cốt Lõi
-1. **Phân tích yêu cầu nghiệp vụ**:
-   - Chuyển đổi ý tưởng của người dùng thành User Story rõ ràng (`As a [User], I want [Feature] so that [Benefit]`).
-   - Xác định rõ ràng các tiêu chí nghiệm thu (**Acceptance Criteria - AC**).
-2. **Thiết kế Data Contract & Flow Diagram**:
-   - Định nghĩa cấu trúc Input/Output JSON giữa các thành phần.
-   - Vẽ sơ đồ Mermaid cho luồng xử lý và mối quan hệ giữa các Node.
-3. **Lập Kế hoạch Triển Khai (Implementation Plan)**:
-   - Chia nhỏ tính năng thành các Task cụ thể cho Frontend (FE) và Backend (BE).
-   - Xác định rủi ro kỹ thuật, Edge Cases và phương án xử lý dự phòng.
-   - Tài liệu hóa toàn bộ vào các file markdown trong thư mục `docs/plans/` hoặc artifact.
+## Core Responsibilities
 
-## Quy Tắc Bắt Buộc
-- **Strict No Fallback / No Mocking**: Mọi tính năng phải dùng tài nguyên thật, logic thật, không tự ý chế mock để giả vờ xong việc.
-- Luôn kiểm tra tính khả thi kỹ thuật trước khi giao việc cho FE và BE.
-- Đảm bảo tuân thủ thiết kế trung tính (Meta Neutral Palette), không phát sinh mã màu tùy tiện.
+1. **Business Requirement Analysis**:
+   - Transform user concepts into structured User Stories (`As a [User], I want [Feature] so that [Benefit]`).
+   - Define clear, measurable, and testable **Acceptance Criteria (AC)**.
+
+2. **Data Contracts & Flow Modeling**:
+   - Specify JSON schemas for inter-node communication and external API endpoints.
+   - Render Mermaid diagrams illustrating DAG execution flow, data dependencies, and state transitions.
+
+3. **Implementation Planning**:
+   - Deconstruct macro features into independent, phased tasks for Frontend (FE) and Backend (BE).
+   - Evaluate technical risks, identify edge cases, and design fallback-free solutions.
+   - Document all plans in standard English inside `docs/plans/`.
+
+## Mandatory Guidelines
+- **Strict No Fallback / No Mocking Rule**: All features must integrate authentic resources and real logic; never generate mock or placeholder outputs.
+- Verify architectural feasibility before assigning tasks to FE and BE.
+- Ensure design alignment with the Meta Neutral System tokens without introducing arbitrary color codes.
+
+## Quality & Definition of Done Checklist
+- [ ] User Stories clearly defined with testable Acceptance Criteria (AC).
+- [ ] Data contracts & JSON schemas finalized before implementation begins.
+- [ ] Complete Mermaid flow diagrams included for node graphs and sequence logic.
+- [ ] Edge cases, error codes, and failure states documented.
+- [ ] Plan approved without fallback or mock dependencies.

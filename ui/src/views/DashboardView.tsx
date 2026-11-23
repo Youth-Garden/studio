@@ -1,23 +1,11 @@
 import { useState, useEffect } from 'react';
-import { 
-  Plus, 
-  Workflow, 
-  Upload, 
-  Trash2, 
-  ArrowRight,
-  Sparkles,
-  Bot,
-  Settings,
-  Search,
-  CheckCircle2,
-  Layers
-} from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import { Card } from '../components/ui/Card';
-import { StudioLogo } from '../components/ui/StudioLogo';
-import type { Locale } from '../lib/i18n';
+import { Icons } from '../shared/icons';
+import { translations, type Locale } from '../lib/i18n';
+import { API_ENDPOINTS } from '../lib/constants';
 import type { WorkflowItem } from '../components/ui/FlowHubModal';
 
 interface DashboardViewProps {
@@ -30,6 +18,7 @@ interface DashboardViewProps {
 
 export function DashboardView({
   currentWorkflowId,
+  locale,
   onOpenWorkflow,
   onOpenSettings,
   onImportWorkflow,
@@ -38,10 +27,11 @@ export function DashboardView({
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [newFlowName, setNewFlowName] = useState('');
+  const t = translations[locale] || translations.vi;
 
   const fetchWorkflows = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/workflows');
+      const res = await fetch(API_ENDPOINTS.WORKFLOWS);
       if (res.ok) {
         const list = await res.json();
         setWorkflows(list);
@@ -133,11 +123,11 @@ export function DashboardView({
         <div className="flex items-center gap-3">
           {/* Logo Studio Flow Hub độc quyền tự động generate */}
           <div className="w-8 h-8 rounded-lg bg-[#222224] border border-zinc-700/60 flex items-center justify-center shadow-inner">
-            <StudioLogo size={18} />
+            <Icons name="logo" size={18} />
           </div>
           <div>
-            <h1 className="font-semibold text-sm tracking-wide text-zinc-100">STUDIO FLOW HUB</h1>
-            <p className="text-[10px] text-zinc-400">Trình Quản Lý & Tự Động Hóa AI Đa Luồng</p>
+            <h1 className="font-semibold text-sm tracking-wide text-zinc-100">{t.title} HUB</h1>
+            <p className="text-[10px] text-zinc-400">{t.dashboardTitle}</p>
           </div>
         </div>
 
@@ -148,17 +138,17 @@ export function DashboardView({
             size="sm" 
             onClick={onOpenSettings}
             className="text-xs gap-1.5"
-            title="Cài đặt hệ thống & giao diện"
+            title={t.settings}
           >
-            <Settings className="w-3.5 h-3.5 text-zinc-400" />
-            <span>Cài đặt</span>
+            <Icons name="settings" size={14} className="text-zinc-400" />
+            <span>{t.settings}</span>
           </Button>
 
           {/* Import JSON */}
           <label className="cursor-pointer">
             <input type="file" accept=".json" onChange={handleFileUpload} className="hidden" />
             <Button variant="secondary" size="sm" type="button" className="gap-1.5 text-xs pointer-events-none">
-              <Upload className="w-3.5 h-3.5 text-zinc-400" />
+              <Icons name="upload" size={14} className="text-zinc-400" />
               Import JSON
             </Button>
           </label>
@@ -170,8 +160,8 @@ export function DashboardView({
             onClick={() => setIsCreating(true)} 
             className="gap-1.5 text-xs"
           >
-            <Plus className="w-3.5 h-3.5 text-zinc-900" />
-            Tạo Workflow Mới
+            <Icons name="plus" size={14} className="text-zinc-900" />
+            {t.createNewWorkflow}
           </Button>
         </div>
       </header>
@@ -182,7 +172,7 @@ export function DashboardView({
         <div className="grid grid-cols-3 gap-4">
           <Card className="p-4 bg-[#202022] border-zinc-800 flex items-center gap-4">
             <div className="p-2.5 rounded-lg bg-[#28282a] border border-zinc-700/60 text-zinc-300">
-              <CheckCircle2 className="w-4 h-4 text-zinc-300" />
+              <Icons name="check-circle-2" size={16} className="text-zinc-300" />
             </div>
             <div>
               <p className="text-xs text-zinc-400">Tổng Workflows Sẵn Sàng</p>
@@ -192,7 +182,7 @@ export function DashboardView({
 
           <Card className="p-4 bg-[#202022] border-zinc-800 flex items-center gap-4">
             <div className="p-2.5 rounded-lg bg-[#28282a] border border-zinc-700/60 text-zinc-300">
-              <Bot className="w-4 h-4 text-zinc-300" />
+              <Icons name="bot" size={16} className="text-zinc-300" />
             </div>
             <div>
               <p className="text-xs text-zinc-400">Gemini CDP + BiRefNet Engine</p>
@@ -205,7 +195,7 @@ export function DashboardView({
 
           <Card className="p-4 bg-[#202022] border-zinc-800 flex items-center gap-4">
             <div className="p-2.5 rounded-lg bg-[#28282a] border border-zinc-700/60 text-zinc-300">
-              <Sparkles className="w-4 h-4 text-zinc-300" />
+              <Icons name="sparkles" size={16} className="text-zinc-300" />
             </div>
             <div>
               <p className="text-xs text-zinc-400">Topological Sort DAG</p>
@@ -220,7 +210,7 @@ export function DashboardView({
             <Input
               value={newFlowName}
               onChange={(e) => setNewFlowName(e.target.value)}
-              placeholder="Nhập tên Workflow mới (ví dụ: Flow Tách Nền & Đóng Khung Shopee)..."
+              placeholder={t.newWorkflowPlaceholder}
               className="text-xs flex-1 bg-zinc-900 border-zinc-700"
               autoFocus
               onKeyDown={(e) => {
@@ -229,10 +219,10 @@ export function DashboardView({
               }}
             />
             <Button variant="default" size="sm" onClick={handleCreateNew}>
-              Tạo và Mở Editor
+              {t.createAndOpen}
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setIsCreating(false)}>
-              Hủy
+              {t.cancel}
             </Button>
           </div>
         )}
@@ -240,16 +230,16 @@ export function DashboardView({
         {/* Thanh Tìm Kiếm và Filter */}
         <div className="flex items-center justify-between pt-2">
           <div className="relative w-72">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+            <Icons name="search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm kiếm workflow..."
+              placeholder={t.searchWorkflow}
               className="pl-8 text-xs bg-[#202022] border-zinc-800"
             />
           </div>
           <div className="text-xs text-zinc-400">
-            Hiển thị <span className="text-zinc-200 font-semibold">{filteredWorkflows.length}</span> luồng xử lý
+            {t.workflowsCount.replace('{count}', String(filteredWorkflows.length))}
           </div>
         </div>
 
@@ -270,12 +260,12 @@ export function DashboardView({
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-sm text-zinc-100 flex items-center gap-2 truncate">
-                      <Workflow className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-sky-400' : 'text-zinc-400'}`} />
+                      <Icons name="workflow" size={16} className={`shrink-0 ${isCurrent ? 'text-sky-400' : 'text-zinc-400'}`} />
                       {flow.name}
                     </span>
                     {isCurrent && (
                       <Badge variant="outline" className="text-[9px] bg-sky-500/10 text-sky-400 border-sky-500/30">
-                        Mở gần nhất
+                        {t.lastOpened}
                       </Badge>
                     )}
                   </div>
@@ -287,11 +277,11 @@ export function DashboardView({
                 <div className="pt-4 mt-4 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-400">
                   <div className="flex items-center gap-2">
                     <span className="flex items-center gap-1 text-zinc-400">
-                      <Layers className="w-3 h-3 text-zinc-500" />
-                      {flow.nodesCount} Nodes
+                      <Icons name="layers" size={12} className="text-zinc-500" />
+                      {t.nodesCount.replace('{count}', String(flow.nodesCount))}
                     </span>
                     <span>•</span>
-                    <span className="text-zinc-400">{flow.edgesCount} Dây nối</span>
+                    <span className="text-zinc-400">{t.edgesCount.replace('{count}', String(flow.edgesCount))}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     {flow.id !== 'gemini_banner_pipeline' && (
@@ -302,11 +292,11 @@ export function DashboardView({
                         className="h-6 w-6 text-zinc-400 hover:text-red-400 hover:bg-zinc-800"
                         title="Xóa Workflow"
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Icons name="trash-2" size={12} />
                       </Button>
                     )}
                     <span className="text-zinc-300 font-medium flex items-center gap-0.5 group-hover:text-zinc-100 transition-colors">
-                      Mở Editor <ArrowRight className="w-3 h-3 ml-0.5" />
+                      Mở Editor <Icons name="arrow-right" size={12} className="ml-0.5" />
                     </span>
                   </div>
                 </div>

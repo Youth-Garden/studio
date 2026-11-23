@@ -1,25 +1,35 @@
 ---
 name: fe-architect
-description: Frontend Architect & React Flow Specialist chuyên xây dựng UI/UX cho Studio Flow bằng React 19, TypeScript, Tailwind v4, @xyflow/react, tuân thủ nghiêm ngặt Meta Neutral Design System, Portal Stack và không hardcode.
+description: Frontend Architect & React Flow Specialist specializing in UI/UX construction for Studio Flow using React 19, TypeScript, Tailwind v4, @xyflow/react, strict Meta Neutral design system, and unified portal architecture.
 ---
 
 # Frontend Architect & Engineering Skill
 
-Skill này định hình tiêu chuẩn phát triển giao diện cho dự án Studio Flow (`D:\learn\studio\ui`).
+This skill defines the technical frontend standards for Studio Flow (`D:\learn\studio\ui`).
 
-## Nguyên Tắc Cốt Lõi (Non-Negotiable Rules)
-1. **Tuyệt Đối Không Hardcode UI & Không Tự Ý Override Style**:
-   - Sử dụng 100% các Shared Component có sẵn: `<Button variant="..." size="...">`, `<Card>`, `<Input>`, `<Textarea>`, `<Badge>`, `<StatusBadge>`, `<Accordion>`, `<Sheet>`, `<Tooltip>`, `<Toaster>`.
-   - **Tuyệt đối KHÔNG tự ý ghi đè class** (`border`, `rounded`, `bg`, `shadow`) thủ công lên component `<Button>`.
-   - Mọi màu sắc tuân thủ triệt để **Meta Neutral Design System** (`#1b1b1b`, `#262626`, `#333333`, `#525252`, `#ffffff`, `#9e9e9e`).
-2. **Kiến Trúc Portal & Dialog Chuẩn EzGame (`usePortal`)**:
-   - Mọi Modal, Popup, Dialog bắt buộc phải mở qua hook `usePortal` và render tập trung tại `<PortalRenderer />`.
-   - Tuyệt đối KHÔNG tự ý tạo thẻ `fixed inset-0` hay tạo backdrop riêng lẻ gây giật màn hình và trùng lặp backdrop.
-   - Không dùng `backdrop-blur`, chỉ dùng nền phẳng `bg-black/50`.
-   - Mọi Dialog phải có animation scale-in 300ms mượt mà.
-3. **Tương Tác Canvas & React Flow**:
-   - Giữ code CustomNodes sạch, tách component logic và Action Toolbar riêng.
-   - Hỗ trợ phím tắt và tọa độ chuột chính xác (`screenToFlowPosition`).
-4. **Code Quality**:
-   - Loại bỏ toàn bộ `unused imports` và sắp xếp import gọn gàng.
-   - Tuyệt đối KHÔNG tự ý mở trình duyệt để test giao diện.
+## Core Principles & Non-Negotiable Rules
+
+1. **Strict Component Reusability & No Hardcoded Styles**:
+   - Utilize standard Shared Components: `<Button variant="..." size="...">`, `<Card>`, `<Input>`, `<Textarea>`, `<Badge>`, `<StatusBadge>`, `<Accordion>`, `<Sheet>`, `<Tooltip>`, `<Toaster>`.
+   - **Never manually override button classes** (`border`, `rounded`, `bg`, `shadow`) on `<Button>` components.
+   - Adhere strictly to the **Meta Neutral Design Palette** (`#1b1b1b`, `#262626`, `#333333`, `#525252`, `#ffffff`, `#9e9e9e`) with Sky accents for active states.
+
+2. **Unified Portal & Dialog Architecture (`usePortal`)**:
+   - Modals, Popups, and Dialogs must open via `usePortal` (or `usePortalWithoutBackdrop`) and render centrally through `<PortalRenderer />`.
+   - Never inject ad-hoc `fixed inset-0` overlays or duplicate backdrops directly inside components.
+   - Dialogs must feature smooth 150-200ms scale-and-fade entry and exit transitions.
+
+3. **Canvas & React Flow Ergonomics**:
+   - Keep node components clean by separating view logic from toolbar actions (`NodeToolbar`).
+   - Support accurate canvas coordinate projection (`screenToFlowPosition`) for palette placement.
+
+4. **Code Cleanliness & Quality**:
+   - Eliminate unused imports and sort dependencies cleanly.
+   - Never open a browser automatically for UI testing; verify via code analysis, linting, and terminal builds.
+
+## Quality & Definition of Done Checklist
+- [ ] Zero inline `<svg>` in feature code; all icons consumed via `<Icons name="..." />`.
+- [ ] No manual class overrides on `<Button>`; uses standard design variants and sizes.
+- [ ] All modals, popups, and dialogs mounted through `usePortal` / `usePortalWithoutBackdrop`.
+- [ ] Active and interactive states leverage shared `<Card isActive={...}>` with Sky accent tokens.
+- [ ] Zero unused imports, clean TypeScript compilation (`bun run build`), no console errors.
