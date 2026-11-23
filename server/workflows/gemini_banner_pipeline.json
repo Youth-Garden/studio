@@ -1,0 +1,128 @@
+{
+  "name": "Studio Workflow",
+  "nodes": [
+    {
+      "id": "node-trigger",
+      "type": "triggerNode",
+      "position": {
+        "x": 60,
+        "y": 200
+      },
+      "data": {
+        "title": "1. Trigger / Input",
+        "mode": "gemini_prompt",
+        "prompt": "Create a high-detail 2D game asset of a fantasy stone block covered in lush green moss, top-down isometric view, isolated clean background",
+        "webhookUrl": "http://localhost:8000/api/workflow/execute"
+      },
+      "measured": {
+        "width": 256,
+        "height": 129
+      },
+      "selected": false
+    },
+    {
+      "id": "node-gemini",
+      "type": "geminiNode",
+      "position": {
+        "x": 380,
+        "y": 200
+      },
+      "data": {
+        "title": "2. Gemini Web CDP",
+        "action": "attach_and_generate",
+        "port": 9222,
+        "targetUrl": "https://gemini.google.com/app"
+      },
+      "measured": {
+        "width": 256,
+        "height": 94
+      },
+      "selected": false
+    },
+    {
+      "id": "node-birefnet",
+      "type": "birefnetNode",
+      "position": {
+        "x": 700,
+        "y": 200
+      },
+      "data": {
+        "title": "3. BiRefNet Tách Nền",
+        "enabled": true,
+        "modelName": "birefnet-general"
+      },
+      "measured": {
+        "width": 256,
+        "height": 75
+      },
+      "selected": false
+    },
+    {
+      "id": "node-banner",
+      "type": "bannerNode",
+      "position": {
+        "x": 1014.7990970654628,
+        "y": 210.97968397291197
+      },
+      "data": {
+        "title": "4. Banner Framing & Filter",
+        "preset": "youtube_thumbnail",
+        "width": 1280,
+        "height": 720,
+        "bgColor": "",
+        "contrast": 1.05,
+        "sharpness": 1.2
+      },
+      "measured": {
+        "width": 256,
+        "height": 94
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node-output",
+      "type": "outputNode",
+      "position": {
+        "x": 1340,
+        "y": 200
+      },
+      "data": {
+        "title": "5. Banner Output",
+        "autoSave": true,
+        "downloadEnabled": true
+      },
+      "measured": {
+        "width": 256,
+        "height": 94
+      },
+      "selected": false
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1-2",
+      "source": "node-trigger",
+      "target": "node-gemini",
+      "animated": true
+    },
+    {
+      "id": "e2-3",
+      "source": "node-gemini",
+      "target": "node-birefnet",
+      "animated": true
+    },
+    {
+      "id": "e3-4",
+      "source": "node-birefnet",
+      "target": "node-banner",
+      "animated": true
+    },
+    {
+      "id": "e4-5",
+      "source": "node-banner",
+      "target": "node-output",
+      "animated": true
+    }
+  ]
+}

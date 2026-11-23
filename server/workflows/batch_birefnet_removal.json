@@ -1,0 +1,39 @@
+{
+  "id": "batch_birefnet_removal",
+  "name": "Batch Background Removal",
+  "description": "Tự động quét và tách nền hàng loạt ảnh sản phẩm bằng BiRefNet AI SOTA",
+  "nodes": [
+    {
+      "id": "node-trigger-batch",
+      "type": "triggerNode",
+      "position": { "x": 80, "y": 200 },
+      "data": {
+        "title": "1. Input / Batch Trigger",
+        "mode": "file_batch",
+        "inputPath": "storage/raw"
+      }
+    },
+    {
+      "id": "node-birefnet-batch",
+      "type": "birefnetNode",
+      "position": { "x": 420, "y": 200 },
+      "data": {
+        "title": "2. BiRefNet Engine",
+        "modelName": "birefnet-general"
+      }
+    },
+    {
+      "id": "node-output-batch",
+      "type": "outputNode",
+      "position": { "x": 760, "y": 200 },
+      "data": {
+        "title": "3. Transparent PNG Store",
+        "outputPath": "storage/transparent"
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "node-trigger-batch", "target": "node-birefnet-batch", "animated": true },
+    { "id": "e2", "source": "node-birefnet-batch", "target": "node-output-batch", "animated": true }
+  ]
+}

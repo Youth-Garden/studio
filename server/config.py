@@ -6,6 +6,7 @@ STORAGE_DIR = BASE_DIR / "storage"
 RAW_DIR = STORAGE_DIR / "raw"
 TRANSPARENT_DIR = STORAGE_DIR / "transparent"
 OUTPUT_DIR = STORAGE_DIR / "output"
+JOBS_FILE = STORAGE_DIR / "jobs.json"
 
 for folder in [RAW_DIR, TRANSPARENT_DIR, OUTPUT_DIR]:
     folder.mkdir(parents=True, exist_ok=True)

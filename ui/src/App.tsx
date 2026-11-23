@@ -1,534 +1,942 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
-  Sparkles, 
-  Layers, 
+  ReactFlow, 
+  Background, 
+  Controls, 
+  ControlButton,
+  MiniMap,
+  useNodesState, 
+  useEdgesState, 
+  addEdge,
+  BackgroundVariant,
+  type Connection,
+  type Node,
+  type Edge
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+
+import { 
+  Play, 
+  Save, 
+  RefreshCw, 
   Sliders, 
+  Download, 
   CheckCircle2, 
-  AlertCircle, 
-  Clock, 
-  Image as ImageIcon,
-  Download,
-  RefreshCw,
-  Eye
+  ChevronRight, 
+  ChevronLeft,
+  History,
+  AlertCircle,
+  Copy,
+  RotateCcw,
+  Plus,
+  FolderKanban,
+  Settings
 } from 'lucide-react';
 
-interface Job {
-  id: string;
-  created_at: number;
-  status: 'queued' | 'processing' | 'completed' | 'failed';
-  progress: number;
-  title: string;
-  raw_filename: string;
-  remove_bg: boolean;
-  model_name: string;
-  preset: string;
-  width: number;
-  height: number;
-  bg_color: string;
-  transparent_filename?: string;
-  output_filename?: string;
-  error?: string;
-}
+import { nodeTypes } from './CustomNodes';
+import { Button } from './components/ui/Button';
+import { Input } from './components/ui/Input';
+import { Textarea } from './components/ui/Textarea';
+import { Badge } from './components/ui/Badge';
+import { StatusBadge } from './components/ui/StatusBadge';
+import { Card, CardHeader, CardTitle, CardContent } from './components/ui/Card';
+import { Sheet } from './components/ui/Sheet';
+import { Toaster, toast } from './components/ui/Toast';
+import { NodePalette, type NodePaletteData } from './components/ui/NodePalette';
+import { SettingsModal, type SettingsModalData, type CanvasPattern } from './components/ui/SettingsModal';
+import { StudioLogo } from './components/ui/StudioLogo';
+import { PortalRenderer } from './shared/components/portal/portal-renderer';
+import { usePortal } from './shared/hooks/use-portal';
+import { NotificationModal, type ModalData } from './components/ui/NotificationModal';
+import { TransitionEffect } from './shared/components/TransitionEffect';
+import { translations, type Locale } from './lib/i18n';
+import { DashboardView } from './views/DashboardView';
 
 export default function App() {
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  const [activeTab, setActiveTab] = useState<'output' | 'transparent' | 'raw'>('output');
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [selectedNode, setSelectedNode] = useState<any>(null);
 
-  // Form states
-  const [title, setTitle] = useState('Game Stone Banner');
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [removeBg, setRemoveBg] = useState(true);
-  const [modelName, setModelName] = useState('birefnet-general');
-  const [preset, setPreset] = useState('youtube_thumbnail');
-  const [width, setWidth] = useState(1280);
-  const [height, setHeight] = useState(720);
-  const [bgColor, setBgColor] = useState('#1e1e2e');
-  
-  // Filter states
-  const [brightness, setBrightness] = useState(1.0);
-  const [contrast, setContrast] = useState(1.05);
-  const [saturation, setSaturation] = useState(1.1);
-  const [sharpness, setSharpness] = useState(1.2);
+  // i18n Language support
+  const [locale, setLocale] = useState<Locale>('vi');
+  const [canvasPattern, setCanvasPattern] = useState<CanvasPattern>('dots');
+  const t = translations[locale];
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Sidebar controls
+  const [sidebarWidth, setSidebarWidth] = useState(380);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [sidebarTab, setSidebarTab] = useState<'config' | 'history'>('config');
+  const isResizingRef = useRef(false);
 
-  const fetchJobs = async () => {
+  // Workflow Execution & History
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [activeJob, setActiveJob] = useState<any>(null);
+  const [historyJobs, setHistoryJobs] = useState<any[]>([]);
+  const [previewTab, setPreviewTab] = useState<'output' | 'transparent' | 'raw'>('output');
+
+  // EzGame Portal Stack Hook
+  const [presentNotice] = usePortal<ModalData>(NotificationModal);
+  const [presentNodePalette] = usePortal<NodePaletteData>(NodePalette);
+  const [presentSettings] = usePortal<SettingsModalData>(SettingsModal);
+
+  // Tự động đồng bộ Route URL (/, /dashboard, /flow/:id)
+  const getInitialRoute = () => {
+    const path = window.location.pathname;
+    if (path.startsWith('/flow/')) {
+      const flowId = path.replace('/flow/', '').trim();
+      return { view: 'editor' as const, flowId: flowId || 'gemini_banner_pipeline' };
+    }
+    if (path === '/editor') {
+      return { view: 'editor' as const, flowId: 'gemini_banner_pipeline' };
+    }
+    // Mặc định truy cập vào là Trang Dashboard Hub
+    return { view: 'dashboard' as const, flowId: 'gemini_banner_pipeline' };
+  };
+
+  const initialRoute = getInitialRoute();
+
+  // View state: 'dashboard' hoặc 'editor'
+  const [currentView, setCurrentView] = useState<'dashboard' | 'editor'>(initialRoute.view);
+
+  // Workflow Hub & Node Palette Modal states
+  const [currentWorkflowId, setCurrentWorkflowId] = useState(initialRoute.flowId);
+
+  // Cập nhật URL khi chuyển đổi trang
+  const navigateToDashboard = () => {
+    setCurrentView('dashboard');
+    window.history.pushState({}, '', '/dashboard');
+  };
+
+  const navigateToEditor = (workflowId: string) => {
+    setCurrentView('editor');
+    setCurrentWorkflowId(workflowId);
+    window.history.pushState({}, '', `/flow/${workflowId}`);
+    fetchWorkflow(workflowId);
+  };
+
+  // Bắt sự kiện Back / Forward nút trình duyệt (PopState)
+  useEffect(() => {
+    const handlePopState = () => {
+      const route = getInitialRoute();
+      setCurrentView(route.view);
+      setCurrentWorkflowId(route.flowId);
+      if (route.view === 'editor') {
+        fetchWorkflow(route.flowId);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Node Inspector Sheet
+  const [inspectedNode, setInspectedNode] = useState<any>(null);
+  const [isInspectorOpen, setIsInspectorOpen] = useState(false);
+
+  // Gắn các hàm Action Toolbar vào Node Data để CustomNodes gọi
+  const enrichNodeData = useCallback((nodeList: Node[]) => {
+    return nodeList.map((node) => ({
+      ...node,
+      data: {
+        ...node.data,
+        onInspect: (id: string) => {
+          const target = nodeList.find((n) => n.id === id);
+          if (target) {
+            setInspectedNode(target);
+            setIsInspectorOpen(true);
+          }
+        },
+        onTestStep: (id: string) => {
+          toast.success("Test riêng bước: " + (node.data.title || id), "Đang thực thi test độc lập cho node này...");
+        },
+        onToggleBypass: (id: string) => {
+          setNodes((nds) =>
+            nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, isBypassed: !n.data.isBypassed } } : n))
+          );
+        },
+        onDuplicate: (id: string) => {
+          const target = nodeList.find((n) => n.id === id);
+          if (!target) return;
+          const newId = `${target.type}-${Date.now().toString().slice(-4)}`;
+          const cloneNode: Node = {
+            ...target,
+            id: newId,
+            position: { x: target.position.x + 30, y: target.position.y + 40 },
+            data: { ...target.data, title: `${target.data.title} (Copy)` }
+          };
+          setNodes((nds) => [...nds, cloneNode]);
+          toast.show("Đã nhân bản Node", String(target.data.title || id));
+        },
+        onDelete: (id: string) => {
+          setNodes((nds) => nds.filter((n) => n.id !== id));
+          setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
+          toast.show("Đã xóa Node", id);
+        }
+      }
+    }));
+  }, [setNodes, setEdges]);
+
+  // Fetch Workflow config by ID
+  const fetchWorkflow = async (workflowId = currentWorkflowId) => {
+    try {
+      const res = await fetch(`http://localhost:8000/api/workflows/${workflowId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setNodes(enrichNodeData(data.nodes || []));
+        setEdges(data.edges || []);
+        setCurrentWorkflowId(workflowId);
+      }
+    } catch (err) {
+      console.error("Lỗi tải workflow:", err);
+    }
+  };
+
+  // Thêm Node mới từ Palette (hỗ trợ vị trí click chuột)
+  const handleAddNodeFromPalette = (type: string, title: string, defaultData: any, customPos?: { x: number; y: number }) => {
+    const newId = `node-${type.replace('Node', '')}-${Date.now().toString().slice(-4)}`;
+    const newNode: Node = {
+      id: newId,
+      type,
+      position: customPos || { x: 250 + Math.random() * 200, y: 180 + Math.random() * 150 },
+      data: {
+        ...defaultData,
+        title,
+        status: 'idle'
+      }
+    };
+    setNodes((nds) => [...enrichNodeData([...nds, newNode])]);
+    toast.success("Đã thêm Node mới", title);
+  };
+
+  // Export Workflow JSON
+  const handleExportWorkflow = () => {
+    const flowData = { id: currentWorkflowId, name: "Exported Studio Flow", nodes, edges };
+    const blob = new Blob([JSON.stringify(flowData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${currentWorkflowId}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Import Workflow JSON
+  const handleImportWorkflow = (flowData: any) => {
+    if (flowData.nodes) {
+      setNodes(enrichNodeData(flowData.nodes));
+      setEdges(flowData.edges || []);
+      if (flowData.id) setCurrentWorkflowId(flowData.id);
+      presentNotice({
+        title: "Import Flow Thành Công",
+        description: `Đã nhập sơ đồ gồm ${flowData.nodes.length} nodes.`
+      });
+    }
+  };
+
+  // Fetch Lịch sử chạy (Execution History)
+  const fetchHistory = async () => {
     try {
       const res = await fetch('http://localhost:8000/api/jobs');
       if (res.ok) {
         const data = await res.json();
-        setJobs(data);
-        if (data.length > 0 && !selectedJob) {
-          setSelectedJob(data[0]);
-        } else if (selectedJob) {
-          const updated = data.find((j: Job) => j.id === selectedJob.id);
-          if (updated) setSelectedJob(updated);
+        setHistoryJobs(data || []);
+        if (data.length > 0 && !activeJob) {
+          setActiveJob(data[0]);
         }
       }
     } catch (err) {
-      console.error("Không kết nối được server API:", err);
+      console.error("Lỗi tải lịch sử jobs:", err);
     }
   };
 
   useEffect(() => {
-    fetchJobs();
-    const interval = setInterval(fetchJobs, 2000);
+    fetchWorkflow();
+    fetchHistory();
+    const interval = setInterval(fetchHistory, 3000);
     return () => clearInterval(interval);
-  }, [selectedJob]);
+  }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selected = e.target.files[0];
-      setFile(selected);
-      setPreviewUrl(URL.createObjectURL(selected));
+  // Xử lý kéo thả thay đổi chiều rộng sidebar
+  const startResizing = useCallback(() => {
+    isResizingRef.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!isResizingRef.current) return;
+      const newWidth = window.innerWidth - event.clientX;
+      if (newWidth >= 260 && newWidth <= 750) {
+        setSidebarWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      isResizingRef.current = false;
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  }, []);
+
+  const onConnect = useCallback(
+    (params: Connection) => setEdges((eds) => addEdge({ ...params, animated: true }, eds)),
+    [setEdges]
+  );
+
+  const handleSaveWorkflow = async () => {
+    try {
+      await fetch('http://localhost:8000/api/workflow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: "Studio Workflow", nodes, edges })
+      });
+      toast.success(t.savedWorkflowNotice, t.savedWorkflowDesc);
+    } catch (err) {
+      toast.error(t.errorSaveNotice, t.errorSaveDesc);
     }
   };
 
-  const handlePresetChange = (presetKey: string) => {
-    setPreset(presetKey);
-    if (presetKey === 'youtube_thumbnail') { setWidth(1280); setHeight(720); }
-    else if (presetKey === 'fhd_banner') { setWidth(1920); setHeight(1080); }
-    else if (presetKey === 'fb_landscape') { setWidth(1200); setHeight(630); }
-    else if (presetKey === 'square_post') { setWidth(1080); setHeight(1080); }
-  };
+  const handleExecuteFlow = async () => {
+    setIsExecuting(true);
+    setSidebarTab('history');
+    setIsSidebarOpen(true);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file) {
-      alert("Vui lòng chọn hoặc kéo thả 1 ảnh!");
-      return;
-    }
+    const triggerNode = nodes.find((n) => n.id === 'node-trigger') || nodes[0];
+    const bannerNode = nodes.find((n) => n.id === 'node-banner');
 
-    setIsSubmitting(true);
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('title', title);
-    formData.append('remove_bg', String(removeBg));
-    formData.append('model_name', modelName);
-    formData.append('preset', preset);
-    formData.append('width', String(width));
-    formData.append('height', String(height));
-    formData.append('bg_color', bgColor);
-    formData.append('brightness', String(brightness));
-    formData.append('contrast', String(contrast));
-    formData.append('saturation', String(saturation));
-    formData.append('sharpness', String(sharpness));
+    const payload = {
+      prompt: (triggerNode?.data?.prompt as string) || "A fantasy moss rock",
+      width: (bannerNode?.data?.width as number) || 1280,
+      height: (bannerNode?.data?.height as number) || 720,
+      bg_color: (bannerNode?.data?.bgColor as string) || "#1e1e2e",
+      contrast: (bannerNode?.data?.contrast as number) || 1.05,
+      sharpness: (bannerNode?.data?.sharpness as number) || 1.2
+    };
 
     try {
-      const res = await fetch('http://localhost:8000/api/jobs/create', {
+      const res = await fetch('http://localhost:8000/api/workflow/execute', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
-      if (res.ok) {
-        await fetchJobs();
-      }
+      const data = await res.json();
+      const jobId = data.job_id;
+
+      const interval = setInterval(async () => {
+        const jobRes = await fetch(`http://localhost:8000/api/jobs/${jobId}`);
+        if (jobRes.ok) {
+          const job = await jobRes.json();
+          setActiveJob(job);
+
+          // Cập nhật trạng thái viền sáng & icon status trực tiếp trên từng Node
+          if (job.node_status) {
+            setNodes((nds) =>
+              nds.map((n) => ({
+                ...n,
+                data: {
+                  ...n.data,
+                  status: job.node_status[n.id] || "idle"
+                }
+              }))
+            );
+          }
+
+          if (job.status === 'completed' || job.status === 'failed') {
+            clearInterval(interval);
+            setIsExecuting(false);
+            fetchHistory();
+          }
+        }
+      }, 1000);
     } catch (err) {
-      alert("Lỗi kết nối tới server local!");
-    } finally {
-      setIsSubmitting(false);
+      presentNotice({
+        title: "Lỗi Thực Thi",
+        description: "Không thể gửi lệnh thực thi workflow đến server."
+      });
+      setIsExecuting(false);
     }
+  };
+
+  const updateNodeData = (key: string, value: any) => {
+    if (!selectedNode) return;
+    setNodes((nds) =>
+      nds.map((n) => {
+        if (n.id === selectedNode.id) {
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              [key]: value
+            }
+          };
+        }
+        return n;
+      })
+    );
+    setSelectedNode((prev: any) => ({
+      ...prev,
+      data: {
+        ...prev.data,
+        [key]: value
+      }
+    }));
+  };
+
+  const copyWebhookCurl = () => {
+    const curl = `curl -X POST http://localhost:8000/api/workflow/execute -H "Content-Type: application/json" -d '{"prompt": "fantasy moss rock"}'`;
+    navigator.clipboard.writeText(curl);
+    toast.success(t.copiedWebhookNotice, t.copiedWebhookDesc);
   };
 
   return (
-    <div className="flex h-screen w-full bg-[#0d0e15] text-gray-200 overflow-hidden font-sans">
-      {/* CỘT TRÁI: FORM ĐIỀU KHIỂN & CẤU HÌNH */}
-      <div className="w-[420px] h-full border-r border-gray-800/80 bg-[#12141e] flex flex-col shadow-2xl z-10">
-        <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="font-bold text-base tracking-wide text-white">STUDIO CONTROL</h1>
-              <p className="text-[11px] text-gray-400">Local Banner & BiRefNet Pipeline</p>
-            </div>
-          </div>
-          <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20 font-mono">
-            BiRefNet Active
-          </span>
-        </div>
+    <>
+      {currentView === 'dashboard' ? (
+        <DashboardView
+          currentWorkflowId={currentWorkflowId}
+          locale={locale}
+          onOpenWorkflow={(id) => navigateToEditor(id)}
+          onOpenSettings={() => {
+            presentSettings({
+              locale,
+              onLocaleChange: (newLoc) => setLocale(newLoc),
+              showCloseButton: true,
+            });
+          }}
+          onImportWorkflow={handleImportWorkflow}
+        />
+      ) : (
+        <div className="flex flex-col h-screen w-full bg-[#1b1b1b] text-zinc-200 overflow-hidden font-sans">
+          {/* THANH TOP NAVBAR TOÀN PHẦN (CỐ ĐỊNH FULL CHIỀU NGANG, KHÔNG BỊ SIDEBAR ĐẨY) */}
+          <header className="h-12 bg-[#1b1b1b] border-b border-zinc-800/80 px-4 flex items-center justify-between z-30 shrink-0">
+            <div className="flex items-center gap-2.5">
+              <StudioLogo size={16} />
+              <h1 className="font-semibold text-xs tracking-wide uppercase text-zinc-100">
+                {t.title}
+              </h1>
+              <Badge variant="secondary">{t.engineBadge}</Badge>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
-          {/* 1. File Upload / Source */}
-          <div className="space-y-1.5">
-            <label className="font-semibold text-gray-300">1. Ảnh đầu vào</label>
-            <div className="border-2 border-dashed border-gray-700 hover:border-indigo-500 rounded-xl p-3 bg-gray-900/50 transition-colors text-center cursor-pointer relative">
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={handleFileChange} 
-                className="absolute inset-0 opacity-0 cursor-pointer"
-              />
-              {previewUrl ? (
-                <div className="flex items-center gap-3 text-left">
-                  <img src={previewUrl} alt="Preview" className="w-14 h-14 object-cover rounded-lg border border-gray-700" />
-                  <div className="truncate">
-                    <p className="text-gray-200 font-medium truncate">{file?.name}</p>
-                    <p className="text-[10px] text-gray-500">{(file?.size ? file.size / 1024 : 0).toFixed(1)} KB</p>
+              {/* Nút Quay lại Dashboard */}
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={navigateToDashboard}
+                className="ml-2 text-xs flex items-center gap-1.5"
+              >
+                <FolderKanban className="w-3.5 h-3.5" />
+                <span>← Dashboard Hub</span>
+              </Button>
+
+              {/* Nút Thêm Node mới */}
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  presentNodePalette({
+                    onAddNode: handleAddNodeFromPalette,
+                  });
+                }}
+                className="text-xs flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>{t.addNode}</span>
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={copyWebhookCurl} title={t.copyWebhook}>
+                <Copy className="w-3.5 h-3.5" />
+                {t.copyWebhook}
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleSaveWorkflow}>
+                <Save className="w-3.5 h-3.5" />
+                {t.saveFlow}
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleExportWorkflow} title="Xuất file JSON của luồng hiện tại">
+                <Download className="w-3.5 h-3.5" />
+                Xuất JSON
+              </Button>
+              <Button variant="default" size="sm" onClick={handleExecuteFlow} disabled={isExecuting}>
+                {isExecuting ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    {t.running}
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                    {t.runWorkflow}
+                  </>
+                )}
+              </Button>
+
+              <div className="h-4 w-px bg-zinc-800 mx-1" />
+
+              {/* Nút Đóng / Mở Sidebar tối giản dạng mũi tên icon-only kèm title/tooltip */}
+              <Button 
+                variant="outline"
+                size="icon" 
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                title={isSidebarOpen ? "Đóng bảng cấu hình" : "Mở bảng cấu hình"}
+                className="h-8 w-8 text-zinc-300 hover:text-zinc-100 border-zinc-700/80"
+              >
+                {isSidebarOpen ? (
+                  <ChevronRight className="w-4 h-4 text-zinc-300" />
+                ) : (
+                  <ChevronLeft className="w-4 h-4 text-zinc-300" />
+                )}
+              </Button>
+            </div>
+          </header>
+
+          {/* KHÔNG GIAN BÊN DƯỚI HEADER (CHỨA CANVAS VÀ SIDEBAR NẰM BÊN DƯỚI) */}
+          <div className="flex flex-1 w-full h-[calc(100vh-3rem)] overflow-hidden relative">
+            {/* KHU VỰC CANVAS REACT FLOW */}
+            <div className="flex-1 h-full relative overflow-hidden">
+              <div 
+                className="w-full h-full relative"
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  const bounds = e.currentTarget.getBoundingClientRect();
+                  const clickPos = {
+                    x: Math.round(e.clientX - bounds.left),
+                    y: Math.round(e.clientY - bounds.top)
+                  };
+                  presentNodePalette({
+                    onAddNode: (type, title, data) => handleAddNodeFromPalette(type, title, data, clickPos)
+                  });
+                }}
+              >
+                <ReactFlow
+                  nodes={nodes}
+                  edges={edges}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChange}
+                  onConnect={onConnect}
+                  nodeTypes={nodeTypes}
+                  onNodeClick={(_, node) => {
+                    setSelectedNode(node);
+                    setSidebarTab('config');
+                    setIsSidebarOpen(true);
+                  }}
+                  fitView
+                  className="bg-[#1b1b1b]"
+                >
+                  {canvasPattern !== 'none' && (
+                    <Background 
+                      variant={
+                        canvasPattern === 'dots' 
+                          ? BackgroundVariant.Dots 
+                          : canvasPattern === 'lines' 
+                          ? BackgroundVariant.Lines 
+                          : BackgroundVariant.Cross
+                      }
+                      color="#2e2e2e" 
+                      gap={20} 
+                      size={canvasPattern === 'cross' ? 6 : 1} 
+                    />
+                  )}
+                  <Controls className="bg-[#262626] border border-zinc-800 text-zinc-300 fill-zinc-300">
+                    <ControlButton
+                      onClick={() => {
+                        presentSettings({
+                          locale,
+                          onLocaleChange: (newLoc) => setLocale(newLoc),
+                          canvasPattern,
+                          onCanvasPatternChange: (newPattern) => setCanvasPattern(newPattern),
+                          showCloseButton: true,
+                        });
+                      }}
+                      title={t.settings}
+                      aria-label={t.settings}
+                    >
+                      <Settings className="w-3.5 h-3.5 text-zinc-300 hover:text-zinc-100" />
+                    </ControlButton>
+                  </Controls>
+                  <MiniMap 
+                    nodeColor="#525252" 
+                    maskColor="rgba(27, 27, 27, 0.85)" 
+                    className="bg-[#262626] border border-zinc-800 rounded-md" 
+                  />
+                </ReactFlow>
+              </div>
+            </div>
+
+            {/* THANH KÉO RESIZE (RESIZABLE SPLITTER) */}
+            {isSidebarOpen && (
+              <div
+                onMouseDown={startResizing}
+                className="w-1.5 h-full bg-zinc-900 hover:bg-zinc-700 active:bg-zinc-500 cursor-col-resize z-30 transition-colors flex items-center justify-center select-none"
+                title="Kéo sang trái/phải để chỉnh độ rộng Sidebar"
+              >
+                <div className="w-0.5 h-6 bg-zinc-600 rounded-full" />
+              </div>
+            )}
+
+            {/* CỘT PHẢI: BẢNG CẤU HÌNH NODE & LỊCH SỬ CHẠY OUTPUT (NẰM DƯỚI HEADER) */}
+            <div 
+              style={{ width: isSidebarOpen ? `${sidebarWidth}px` : '0px' }}
+              className={`h-full bg-[#1b1b1b] border-l border-zinc-800/80 flex flex-col z-20 shrink-0 transition-[width] duration-300 ease-in-out ${
+                isSidebarOpen ? 'overflow-hidden' : 'overflow-hidden border-l-0 pointer-events-none'
+              }`}
+            >
+              <TransitionEffect
+                show={isSidebarOpen}
+                enter="opacity-0 translate-x-2"
+                enterActive="opacity-100 translate-x-0 transition-all duration-250 ease-out"
+                exit="opacity-100 translate-x-0"
+                exitActive="opacity-0 translate-x-2 transition-all duration-150 ease-in"
+                duration={150}
+                className="h-full flex flex-col w-full"
+                style={{ width: `${sidebarWidth}px` }}
+              >
+                {/* Header Tab của Sidebar (Nằm bên dưới Header chính) */}
+                <div className="h-11 border-b border-zinc-800/80 px-3 flex items-center justify-between shrink-0 bg-[#212121]">
+                  <div className="flex items-center gap-1 bg-[#18181a] p-0.5 rounded-md border border-zinc-800 text-xs w-full">
+                    <button
+                      onClick={() => setSidebarTab('config')}
+                      className={`flex-1 py-1 px-2.5 rounded text-xs transition-all duration-150 flex items-center justify-center gap-1.5 ${
+                        sidebarTab === 'config' ? 'bg-zinc-800 text-zinc-100 font-medium shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      <Sliders className="w-3.5 h-3.5" />
+                      <span>{t.sidebarConfig}</span>
+                    </button>
+                    <button
+                      onClick={() => setSidebarTab('history')}
+                      className={`flex-1 py-1 px-2.5 rounded text-xs transition-all duration-150 flex items-center justify-center gap-1.5 ${
+                        sidebarTab === 'history' ? 'bg-zinc-800 text-zinc-100 font-medium shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      <History className="w-3.5 h-3.5" />
+                      <span>{t.sidebarHistory} ({historyJobs.length})</span>
+                    </button>
                   </div>
                 </div>
-              ) : (
-                <div className="py-2">
-                  <ImageIcon className="w-6 h-6 mx-auto text-gray-500 mb-1" />
-                  <p className="text-gray-400 font-medium">Bấm hoặc kéo thả ảnh vào đây</p>
-                  <p className="text-[10px] text-gray-600">PNG, JPG, WEBP</p>
-                </div>
-              )}
-            </div>
-          </div>
 
-          {/* 2. Tiêu đề Job */}
-          <div className="space-y-1.5">
-            <label className="font-semibold text-gray-300">2. Tiêu đề / Tên Banner</label>
-            <input 
-              type="text" 
-              value={title} 
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full bg-gray-900/80 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 focus:outline-none focus:border-indigo-500"
-            />
-          </div>
+                {/* Nội dung Sidebar (Cuộn dọc độc lập, cố định gutter để không bị nhảy layout) */}
+                <div className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">
 
-          {/* 3. Tách nền SOTA */}
-          <div className="p-3 bg-indigo-950/20 border border-indigo-900/40 rounded-xl space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-indigo-400" />
-                <span className="font-semibold text-indigo-200">Tách nền BiRefNet</span>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  checked={removeBg} 
-                  onChange={(e) => setRemoveBg(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
-              </label>
-            </div>
+        {/* TAB 1: CẤU HÌNH NODE */}
+        {sidebarTab === 'config' && (
+          <div className="flex-1 p-4 space-y-4 text-xs">
+            {selectedNode ? (
+              <Card>
+                <CardHeader className="pb-3 border-b border-zinc-800">
+                  <div className="flex justify-between items-center">
+                    <CardTitle>{selectedNode.data.title || selectedNode.id}</CardTitle>
+                    <Badge variant="outline">{selectedNode.type}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-3 space-y-3">
+                  {/* Node Trigger Form */}
+                  {selectedNode.id === 'node-trigger' && (
+                    <div className="space-y-2">
+                      <label className="text-[11px] text-zinc-400 font-medium">Prompt Gemini:</label>
+                      <Textarea
+                        rows={5}
+                        value={selectedNode.data.prompt || ''}
+                        onChange={(e) => updateNodeData('prompt', e.target.value)}
+                      />
+                      <div className="text-[10px] text-zinc-400 pt-1">
+                        Endpoint: <code className="text-zinc-200 font-mono">POST /api/workflow/execute</code>
+                      </div>
+                    </div>
+                  )}
 
-            {removeBg && (
-              <div className="space-y-1 pt-1">
-                <label className="text-[11px] text-gray-400">Mô hình AI tách nền:</label>
-                <select 
-                  value={modelName} 
-                  onChange={(e) => setModelName(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-700 rounded-lg px-2.5 py-1.5 text-gray-200 focus:outline-none focus:border-indigo-500"
-                >
-                  <option value="birefnet-general">BiRefNet (SOTA 2024 - Khuyên dùng)</option>
-                  <option value="isnet-general-use">IS-Net DIS (Độ chi tiết cao)</option>
-                  <option value="u2net">U2Net (Nhẹ, tốc độ nhanh)</option>
-                </select>
-              </div>
-            )}
-          </div>
+                  {/* Node Banner Form */}
+                  {selectedNode.id === 'node-banner' && (
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <label className="text-[11px] text-zinc-400 font-medium">Preset Kích thước:</label>
+                        <select
+                          value={selectedNode.data.preset || 'youtube_thumbnail'}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === 'youtube_thumbnail') { updateNodeData('width', 1280); updateNodeData('height', 720); }
+                            else if (val === 'fhd_banner') { updateNodeData('width', 1920); updateNodeData('height', 1080); }
+                            else if (val === 'square_post') { updateNodeData('width', 1080); updateNodeData('height', 1080); }
+                            updateNodeData('preset', val);
+                          }}
+                          className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none"
+                        >
+                          <option value="youtube_thumbnail">YouTube Thumbnail (1280x720)</option>
+                          <option value="fhd_banner">Full HD (1920x1080)</option>
+                          <option value="square_post">Square (1080x1080)</option>
+                        </select>
+                      </div>
 
-          {/* 4. Kích thước Banner & Background */}
-          <div className="space-y-2.5">
-            <label className="font-semibold text-gray-300">4. Kích thước & Màu nền Banner</label>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { key: 'youtube_thumbnail', label: 'YouTube (1280x720)' },
-                { key: 'fhd_banner', label: 'Full HD (1920x1080)' },
-                { key: 'fb_landscape', label: 'Facebook (1200x630)' },
-                { key: 'square_post', label: 'Square (1080x1080)' },
-              ].map((p) => (
-                <button
-                  key={p.key}
-                  type="button"
-                  onClick={() => handlePresetChange(p.key)}
-                  className={`px-2 py-1.5 rounded-lg border text-left truncate transition-colors ${
-                    preset === p.key 
-                      ? 'bg-indigo-600/20 border-indigo-500 text-indigo-200' 
-                      : 'bg-gray-900/60 border-gray-800 text-gray-400 hover:border-gray-700'
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] text-zinc-400 font-medium">Màu nền Banner:</label>
+                        <div className="flex items-center gap-2">
+                          <input 
+                            type="color" 
+                            value={selectedNode.data.bgColor || '#1e1e2e'}
+                            onChange={(e) => updateNodeData('bgColor', e.target.value)}
+                            className="w-7 h-7 rounded border border-zinc-700 bg-transparent cursor-pointer"
+                          />
+                          <Input
+                            value={selectedNode.data.bgColor || '#1e1e2e'}
+                            onChange={(e) => updateNodeData('bgColor', e.target.value)}
+                            className="font-mono text-[11px]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-            <div className="flex items-center gap-3 pt-1">
-              <span className="text-[11px] text-gray-400">Background:</span>
-              <div className="flex items-center gap-2">
-                <input 
-                  type="color" 
-                  value={bgColor === 'transparent' ? '#000000' : bgColor} 
-                  onChange={(e) => setBgColor(e.target.value)}
-                  disabled={bgColor === 'transparent'}
-                  className="w-7 h-7 rounded border border-gray-700 bg-transparent cursor-pointer"
-                />
-                <button
-                  type="button"
-                  onClick={() => setBgColor(bgColor === 'transparent' ? '#1e1e2e' : 'transparent')}
-                  className={`px-2 py-1 rounded text-[10px] border transition-colors ${
-                    bgColor === 'transparent' 
-                      ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300' 
-                      : 'bg-gray-800 border-gray-700 text-gray-400'
-                  }`}
-                >
-                  {bgColor === 'transparent' ? 'Đang để Trong suốt' : 'Giữ Alpha trong suốt'}
-                </button>
-              </div>
-            </div>
-          </div>
+                  {/* Node Gemini Form */}
+                  {selectedNode.type === 'geminiNode' && (
+                    <div className="space-y-2">
+                      <label className="text-[11px] text-zinc-400 font-medium">Cổng Chrome Remote Debugging (CDP):</label>
+                      <Input
+                        type="number"
+                        value={selectedNode.data.port || 9222}
+                        onChange={(e) => updateNodeData('port', parseInt(e.target.value) || 9222)}
+                        className="font-mono text-xs"
+                      />
+                      <p className="text-[10px] text-zinc-500">Mặc định: 9222 (Chrome attach session)</p>
+                    </div>
+                  )}
 
-          {/* 5. Bộ lọc & Tinh chỉnh ảnh */}
-          <div className="p-3 bg-gray-900/40 border border-gray-800 rounded-xl space-y-2">
-            <div className="flex items-center gap-2 font-semibold text-gray-300">
-              <Sliders className="w-3.5 h-3.5 text-gray-400" />
-              <span>5. Bộ lọc màu & Độ nét</span>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3 pt-1">
-              <div>
-                <div className="flex justify-between text-[10px] text-gray-400">
-                  <span>Độ tương phản</span>
-                  <span>{contrast}x</span>
-                </div>
-                <input 
-                  type="range" min="0.8" max="1.5" step="0.05" 
-                  value={contrast} onChange={(e) => setContrast(parseFloat(e.target.value))} 
-                  className="w-full accent-indigo-500 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
+                  {/* Node BiRefNet Form */}
+                  {(selectedNode.id === 'node-birefnet' || selectedNode.type === 'birefnetNode') && (
+                    <div className="space-y-2">
+                      <label className="text-[11px] text-zinc-400 font-medium">Model AI Tách nền:</label>
+                      <select
+                        value={selectedNode.data.modelName || 'birefnet-general'}
+                        onChange={(e) => updateNodeData('modelName', e.target.value)}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none"
+                      >
+                        <option value="birefnet-general">BiRefNet (SOTA 2024 - Khuyên dùng)</option>
+                        <option value="isnet-general-use">IS-Net DIS</option>
+                      </select>
+                    </div>
+                  )}
 
-              <div>
-                <div className="flex justify-between text-[10px] text-gray-400">
-                  <span>Độ nét (Sharp)</span>
-                  <span>{sharpness}x</span>
-                </div>
-                <input 
-                  type="range" min="1.0" max="2.0" step="0.1" 
-                  value={sharpness} onChange={(e) => setSharpness(parseFloat(e.target.value))} 
-                  className="w-full accent-indigo-500 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-
-              <div>
-                <div className="flex justify-between text-[10px] text-gray-400">
-                  <span>Độ bão hòa</span>
-                  <span>{saturation}x</span>
-                </div>
-                <input 
-                  type="range" min="0.8" max="1.5" step="0.05" 
-                  value={saturation} onChange={(e) => setSaturation(parseFloat(e.target.value))} 
-                  className="w-full accent-indigo-500 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-
-              <div>
-                <div className="flex justify-between text-[10px] text-gray-400">
-                  <span>Độ sáng</span>
-                  <span>{brightness}x</span>
-                </div>
-                <input 
-                  type="range" min="0.8" max="1.3" step="0.05" 
-                  value={brightness} onChange={(e) => setBrightness(parseFloat(e.target.value))} 
-                  className="w-full accent-indigo-500 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Submit Run Button */}
-          <button
-            type="submit"
-            disabled={isSubmitting || !file}
-            className={`w-full py-2.5 rounded-xl font-bold text-sm tracking-wide shadow-lg transition-all flex items-center justify-center gap-2 ${
-              isSubmitting || !file 
-                ? 'bg-gray-800 text-gray-500 cursor-not-allowed' 
-                : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/30 active:scale-[0.98]'
-            }`}
-          >
-            {isSubmitting ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                Đang đẩy vào Hàng đợi...
-              </>
+                  {/* Thông số JSON Runtime Inspector ngay trên Sidebar */}
+                  <div className="pt-2 border-t border-zinc-800/80 space-y-1.5">
+                    <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Thông số Runtime JSON:</label>
+                    <pre className="p-2.5 bg-zinc-950 border border-zinc-800/80 rounded text-[10px] font-mono text-zinc-400 overflow-x-auto max-h-40">
+                      {JSON.stringify(selectedNode.data, null, 2)}
+                    </pre>
+                  </div>
+                </CardContent>
+              </Card>
             ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                XỬ LÝ BANNER NGAY
-              </>
+              <Card className="p-5 text-center text-zinc-400 space-y-2">
+                <Sliders className="w-5 h-5 mx-auto text-zinc-500" />
+                <p>Click vào một Node bất kỳ trên sơ đồ để chỉnh sửa thông số.</p>
+              </Card>
             )}
-          </button>
-        </form>
-      </div>
-
-      {/* CỘT GIỮA: LIVE PREVIEW & SO SÁNH 3 TRẠNG THÁI */}
-      <div className="flex-1 h-full flex flex-col bg-[#0a0b10] border-r border-gray-800/80">
-        <div className="h-14 border-b border-gray-800 px-6 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Eye className="w-4 h-4 text-indigo-400" />
-            <h2 className="font-semibold text-sm text-gray-200">
-              {selectedJob ? selectedJob.title : 'Chưa chọn Job'}
-            </h2>
           </div>
+        )}
 
-          {/* Tabs so sánh */}
-          <div className="flex items-center bg-gray-900 border border-gray-800 p-1 rounded-xl gap-1 text-xs">
-            <button
-              onClick={() => setActiveTab('output')}
-              className={`px-3 py-1 rounded-lg transition-colors font-medium ${
-                activeTab === 'output' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-gray-200'
-              }`}
-            >
-              Banner Thành phẩm
-            </button>
-            <button
-              onClick={() => setActiveTab('transparent')}
-              className={`px-3 py-1 rounded-lg transition-colors font-medium ${
-                activeTab === 'transparent' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-gray-200'
-              }`}
-            >
-              Tách nền BiRefNet (PNG)
-            </button>
-            <button
-              onClick={() => setActiveTab('raw')}
-              className={`px-3 py-1 rounded-lg transition-colors font-medium ${
-                activeTab === 'raw' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-gray-200'
-              }`}
-            >
-              Ảnh gốc (Raw)
-            </button>
-          </div>
-        </div>
-
-        {/* Display Canvas View */}
-        <div className="flex-1 p-6 flex items-center justify-center overflow-auto relative">
-          {selectedJob ? (
-            <div className="max-w-full max-h-full flex flex-col items-center">
-              <div className="relative rounded-xl overflow-hidden border border-gray-800 shadow-2xl checkerboard-bg">
-                {activeTab === 'output' && (
-                  selectedJob.output_filename ? (
-                    <img 
-                      src={`http://localhost:8000/media/output/${selectedJob.output_filename}`} 
-                      alt="Output Banner" 
-                      className="max-h-[65vh] object-contain"
-                    />
-                  ) : (
-                    <div className="w-[600px] h-[340px] flex items-center justify-center text-gray-500">
-                      {selectedJob.status === 'processing' ? 'Đang tổng hợp banner...' : 'Chưa có banner thành phẩm'}
-                    </div>
-                  )
-                )}
-
-                {activeTab === 'transparent' && (
-                  selectedJob.transparent_filename ? (
-                    <img 
-                      src={`http://localhost:8000/media/transparent/${selectedJob.transparent_filename}`} 
-                      alt="Transparent" 
-                      className="max-h-[65vh] object-contain"
-                    />
-                  ) : (
-                    <div className="w-[600px] h-[340px] flex items-center justify-center text-gray-500">
-                      {selectedJob.status === 'processing' ? 'BiRefNet đang tách nền...' : 'Job này không bật tách nền'}
-                    </div>
-                  )
-                )}
-
-                {activeTab === 'raw' && (
-                  selectedJob.raw_filename && (
-                    <img 
-                      src={`http://localhost:8000/media/raw/${selectedJob.raw_filename}`} 
-                      alt="Raw" 
-                      className="max-h-[65vh] object-contain"
-                    />
-                  )
-                )}
-              </div>
-
-              {/* Thông số bên dưới ảnh */}
-              <div className="mt-4 flex items-center gap-4 text-xs text-gray-400">
-                <span>Kích thước: <strong className="text-gray-200">{selectedJob.width} x {selectedJob.height}</strong></span>
-                <span>Mô hình: <strong className="text-indigo-400">{selectedJob.model_name}</strong></span>
-                {selectedJob.output_filename && (
-                  <a 
-                    href={`http://localhost:8000/media/output/${selectedJob.output_filename}`} 
-                    download 
-                    className="flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 font-semibold ml-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    Tải ảnh xuống
-                  </a>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center text-gray-600">
-              <ImageIcon className="w-12 h-12 mx-auto mb-2 opacity-40" />
-              <p>Chưa có job nào được chọn hoặc tạo</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* CỘT PHẢI: HÀNG ĐỢI JOBS REAL-TIME */}
-      <div className="w-80 h-full bg-[#12141e] flex flex-col">
-        <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-          <h3 className="font-semibold text-xs tracking-wider uppercase text-gray-400">
-            Hàng đợi ({jobs.length})
-          </h3>
-          <button 
-            onClick={fetchJobs} 
-            className="p-1 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-gray-200 transition-colors"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {jobs.map((job) => (
-            <div
-              key={job.id}
-              onClick={() => setSelectedJob(job)}
-              className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                selectedJob?.id === job.id
-                  ? 'bg-indigo-950/30 border-indigo-500/60 shadow-lg'
-                  : 'bg-gray-900/60 border-gray-800/80 hover:border-gray-700'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="font-semibold text-xs text-gray-200 truncate pr-2">
-                  {job.title}
-                </span>
-                {job.status === 'completed' && (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                )}
-                {job.status === 'processing' && (
-                  <RefreshCw className="w-4 h-4 text-indigo-400 animate-spin shrink-0" />
-                )}
-                {job.status === 'queued' && (
-                  <Clock className="w-4 h-4 text-amber-400 shrink-0" />
-                )}
-                {job.status === 'failed' && (
-                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-                )}
-              </div>
-
-              <div className="flex items-center justify-between text-[10px] text-gray-500">
-                <span>{job.width}x{job.height}</span>
-                <span className="uppercase font-mono">{job.status}</span>
-              </div>
-
-              {job.status === 'processing' && (
-                <div className="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden mt-2">
-                  <div 
-                    className="bg-indigo-500 h-full transition-all duration-300" 
-                    style={{ width: `${job.progress}%` }} 
-                  />
+        {/* TAB 2: LỊCH SỬ CHẠY OUTPUT & SO SÁNH RAW (EXECUTION HISTORY) */}
+        {sidebarTab === 'history' && (
+          <div className="flex-1 p-4 space-y-4 text-xs">
+            {/* Chi tiết Job đang chọn xem */}
+            {activeJob ? (
+              <Card className="space-y-3 p-3">
+                <div className="flex items-center justify-between">
+                  <div className="truncate pr-2">
+                    <p className="font-semibold text-zinc-100 text-xs truncate">{activeJob.title}</p>
+                    <p className="text-[10px] text-zinc-500 font-mono">ID: {activeJob.id}</p>
+                  </div>
+                  <StatusBadge status={activeJob.status} />
                 </div>
-              )}
-            </div>
-          ))}
 
-          {jobs.length === 0 && (
-            <p className="text-center text-xs text-gray-600 py-8">Chưa có job nào trong hàng đợi</p>
-          )}
+                {/* Hiển thị chi tiết lỗi nếu Job bị Failed */}
+                {activeJob.status === 'failed' && activeJob.error && (
+                  <div className="p-2.5 bg-red-950/30 border border-red-900/50 rounded text-[11px] text-red-300 space-y-1">
+                    <p className="font-semibold flex items-center gap-1 text-red-400">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      Nguyên nhân lỗi:
+                    </p>
+                    <p className="font-mono text-[10px] leading-relaxed break-words whitespace-pre-wrap text-red-300/90">
+                      {activeJob.error}
+                    </p>
+                  </div>
+                )}
+
+                {/* Tabs xem 3 định dạng: Banner Output / BiRefNet Transparent / Raw Gemini */}
+                <div className="flex gap-1 bg-[#18181a] p-1 rounded-lg border border-zinc-800 text-xs">
+                  <button
+                    onClick={() => setPreviewTab('output')}
+                    className={`flex-1 py-1.5 px-2.5 rounded-md truncate transition-all duration-200 ease-out font-medium cursor-pointer ${
+                      previewTab === 'output' ? 'bg-zinc-800 text-zinc-100 shadow-sm ring-1 ring-white/5' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+                    }`}
+                    title={`Banner (${activeJob.width}x${activeJob.height})`}
+                  >
+                    Banner
+                  </button>
+                  <button
+                    onClick={() => setPreviewTab('transparent')}
+                    className={`flex-1 py-1.5 px-2.5 rounded-md truncate transition-all duration-200 ease-out font-medium cursor-pointer ${
+                      previewTab === 'transparent' ? 'bg-zinc-800 text-zinc-100 shadow-sm ring-1 ring-white/5' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+                    }`}
+                    title="Ảnh tách nền PNG"
+                  >
+                    Tách nền
+                  </button>
+                  <button
+                    onClick={() => setPreviewTab('raw')}
+                    className={`flex-1 py-1.5 px-2.5 rounded-md truncate transition-all duration-200 ease-out font-medium cursor-pointer ${
+                      previewTab === 'raw' ? 'bg-zinc-800 text-zinc-100 shadow-sm ring-1 ring-white/5' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+                    }`}
+                    title="Ảnh gốc Raw từ Gemini"
+                  >
+                    Ảnh Raw
+                  </button>
+                </div>
+
+                {/* Khung hiển thị ảnh Preview */}
+                <div className={`rounded border border-zinc-800 overflow-hidden min-h-[180px] flex items-center justify-center ${
+                  previewTab === 'transparent' ? 'checkerboard-bg' : 'bg-zinc-950'
+                }`}>
+                  {previewTab === 'output' && activeJob.output_filename && (
+                    <img
+                      src={`http://localhost:8000/media/output/${activeJob.output_filename}`}
+                      alt="Banner Output"
+                      className="w-full object-contain max-h-[260px]"
+                    />
+                  )}
+                  {previewTab === 'transparent' && activeJob.transparent_filename && (
+                    <img
+                      src={`http://localhost:8000/media/transparent/${activeJob.transparent_filename}`}
+                      alt="BiRefNet Transparent"
+                      className="w-full object-contain max-h-[260px]"
+                    />
+                  )}
+                  {previewTab === 'raw' && activeJob.raw_filename && (
+                    <img
+                      src={`http://localhost:8000/media/raw/${activeJob.raw_filename}`}
+                      alt="Raw Input"
+                      className="w-full object-contain max-h-[260px]"
+                    />
+                  )}
+                </div>
+
+                {/* Các nút tiện ích: Tải về / Mở link trực tiếp */}
+                <div className="flex items-center gap-2 pt-1">
+                  {activeJob.output_filename && (
+                    <a
+                      href={`http://localhost:8000/media/output/${activeJob.output_filename}`}
+                      download
+                      className="flex-1"
+                    >
+                      <Button variant="secondary" size="sm" className="w-full gap-1.5 text-[11px]">
+                        <Download className="w-3.5 h-3.5 shrink-0" />
+                        <span>Tải Banner</span>
+                      </Button>
+                    </a>
+                  )}
+                  {activeJob.transparent_filename && (
+                    <a
+                      href={`http://localhost:8000/media/transparent/${activeJob.transparent_filename}`}
+                      download
+                      className="flex-1"
+                    >
+                      <Button variant="outline" size="sm" className="w-full gap-1.5 text-[11px]">
+                        <Download className="w-3.5 h-3.5 shrink-0" />
+                        <span>Tải PNG Tách Nền</span>
+                      </Button>
+                    </a>
+                  )}
+                </div>
+              </Card>
+            ) : (
+              <Card className="p-4 text-center text-zinc-400">
+                {t.selectNodeHint}
+              </Card>
+            )}
+
+            {/* Danh sách các lần chạy trước (Execution Run List) */}
+            <div className="space-y-2 pt-2">
+              <div className="flex items-center justify-between text-zinc-400 pb-1 border-b border-zinc-800">
+                <span className="font-medium text-[11px] uppercase tracking-wider">{t.historyTitle}</span>
+                <Button variant="ghost" size="icon" onClick={fetchHistory} className="h-6 w-6">
+                  <RotateCcw className="w-3 h-3 text-zinc-400" />
+                </Button>
+              </div>
+
+              <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
+                {historyJobs.map((job) => (
+                  <div
+                    key={job.id}
+                    onClick={() => setActiveJob(job)}
+                    className={`p-2.5 rounded border transition-colors cursor-pointer flex items-center justify-between ${
+                      activeJob?.id === job.id 
+                        ? 'bg-zinc-800/90 border-zinc-600' 
+                        : 'bg-[#262626] border-zinc-800 hover:border-zinc-700'
+                    }`}
+                  >
+                    <div className="truncate pr-2">
+                      <p className="font-medium text-zinc-200 truncate text-[11px]">{job.title}</p>
+                      <p className="text-[10px] text-zinc-500 font-mono">
+                        {new Date(job.created_at * 1000).toLocaleTimeString()} • {job.width}x{job.height}
+                      </p>
+                    </div>
+                    {job.status === 'completed' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                    {job.status === 'processing' && <RefreshCw className="w-3.5 h-3.5 text-zinc-400 animate-spin shrink-0" />}
+                    {job.status === 'failed' && <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+                </div>
+              </TransitionEffect>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+
+      {/* Mount EzGame Portal Renderer tại Root (Toàn bộ Modal, FlowHub, NodePalette render tập trung tại đây) */}
+      <PortalRenderer />
+      
+      {/* Node Inspector Sheet (Soi dữ liệu chi tiết Input / Output JSON của từng Node) */}
+      <Sheet
+        isOpen={isInspectorOpen}
+        onClose={() => setIsInspectorOpen(false)}
+        title={inspectedNode ? `Node Inspector: ${inspectedNode.data?.title || inspectedNode.id}` : "Node Inspector"}
+        description="Chi tiết dữ liệu cấu hình và trạng thái runtime của Node"
+      >
+        {inspectedNode && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
+              <span className="font-mono text-zinc-400 text-xs">ID: {inspectedNode.id}</span>
+              <StatusBadge status={inspectedNode.data?.status || 'idle'} />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold text-zinc-300">Thông số cấu hình (Config):</label>
+              <pre className="p-3 bg-zinc-950 border border-zinc-800 rounded-md text-[11px] font-mono text-zinc-300 overflow-x-auto max-h-48">
+                {JSON.stringify(inspectedNode.data, null, 2)}
+              </pre>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold text-zinc-300">Tọa độ trên Canvas:</label>
+              <div className="p-2.5 bg-zinc-950 border border-zinc-800 rounded text-xs font-mono text-zinc-400 flex gap-4">
+                <span>X: {Math.round(inspectedNode.position?.x || 0)}px</span>
+                <span>Y: {Math.round(inspectedNode.position?.y || 0)}px</span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-zinc-900/60 border border-zinc-800/80 rounded text-[11px] text-zinc-400 space-y-1">
+              <p className="font-medium text-zinc-300">💡 Gợi ý Auto Flow:</p>
+              <p>Node này nhận dữ liệu tự động từ các dây nối trước đó và truyền kết quả cho các node kế tiếp qua DAG Runner.</p>
+            </div>
+          </div>
+        )}
+      </Sheet>
+
+      {/* Toast Notification Container */}
+      <Toaster />
+    </>
   );
 }

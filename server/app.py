@@ -10,13 +10,21 @@ from pydantic import BaseModel
 
 from config import RAW_DIR, TRANSPARENT_DIR, OUTPUT_DIR, BANNER_PRESETS
 from queue_manager import queue_mgr
+from workflow_manager import (
+    load_workflow, 
+    save_workflow, 
+    list_workflows, 
+    get_workflow_by_id, 
+    save_workflow_by_id, 
+    delete_workflow_by_id
+)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     queue_mgr.start_worker()
     yield
 
-app = FastAPI(title="Local Studio & Gemini Automation API", lifespan=lifespan)
+app = FastAPI(title="Local Studio & Node Flow API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -29,6 +37,72 @@ app.add_middleware(
 app.mount("/media/raw", StaticFiles(directory=str(RAW_DIR)), name="raw")
 app.mount("/media/transparent", StaticFiles(directory=str(TRANSPARENT_DIR)), name="transparent")
 app.mount("/media/output", StaticFiles(directory=str(OUTPUT_DIR)), name="output")
+
+# API quản lý danh sách và chi tiết các Workflows (Dashboard Flow Hub)
+@app.get("/api/workflows")
+def get_all_workflows():
+    return list_workflows()
+
+@app.get("/api/workflows/{workflow_id}")
+def get_single_workflow(workflow_id: str):
+    return get_workflow_by_id(workflow_id)
+
+@app.post("/api/workflows/{workflow_id}")
+def update_single_workflow(workflow_id: str, flow: dict):
+    return save_workflow_by_id(workflow_id, flow)
+
+@app.delete("/api/workflows/{workflow_id}")
+def remove_workflow(workflow_id: str):
+    success = delete_workflow_by_id(workflow_id)
+    if not success:
+        raise HTTPException(status_code=400, detail="Không thể xóa workflow mặc định hoặc file không tồn tại")
+    return {"message": "Đã xóa workflow"}
+
+# API quản lý Workflow JSON (tương thích ngược)
+@app.get("/api/workflow")
+def get_workflow():
+    return load_workflow()
+
+@app.post("/api/workflow")
+def update_workflow(flow: dict):
+    save_workflow(flow)
+    return {"message": "Đã lưu workflow thành công"}
+
+class WorkflowExecuteRequest(BaseModel):
+    prompt: Optional[str] = "A fantasy moss stone"
+    width: Optional[int] = 1280
+    height: Optional[int] = 720
+    bg_color: Optional[str] = "#1e1e2e"
+    contrast: Optional[float] = 1.05
+    sharpness: Optional[float] = 1.2
+    model_name: Optional[str] = "birefnet-general"
+
+# Webhook Endpoint để Agent khác hoặc nút "Run" trên Canvas gọi vào
+@app.post("/api/workflow/execute")
+async def execute_workflow(req: WorkflowExecuteRequest):
+    job_data = {
+        "mode": "gemini_prompt",
+        "prompt": req.prompt,
+        "title": f"Flow: {req.prompt[:30]}",
+        "remove_bg": True,
+        "model_name": req.model_name,
+        "preset": "custom",
+        "width": req.width,
+        "height": req.height,
+        "bg_color": req.bg_color,
+        "filters": {
+            "contrast": req.contrast,
+            "sharpness": req.sharpness,
+            "brightness": 1.0,
+            "saturation": 1.1
+        }
+    }
+    job_id = await queue_mgr.add_job(job_data)
+    return {
+        "job_id": job_id,
+        "status": "queued",
+        "message": "Workflow đã được kích hoạt và đưa vào hàng đợi."
+    }
 
 @app.get("/api/presets")
 def get_presets():
@@ -52,94 +126,6 @@ def get_job(job_id: str):
     if job_id not in queue_mgr.jobs:
         raise HTTPException(status_code=404, detail="Job not found")
     return queue_mgr.jobs[job_id]
-
-class AgentPromptRequest(BaseModel):
-    prompt: str
-    title: Optional[str] = None
-    remove_bg: Optional[bool] = True
-    model_name: Optional[str] = "birefnet-general"
-    preset: Optional[str] = "youtube_thumbnail"
-    width: Optional[int] = 1280
-    height: Optional[int] = 720
-    bg_color: Optional[str] = "#1e1e2e"
-    brightness: Optional[float] = 1.0
-    contrast: Optional[float] = 1.0
-    saturation: Optional[float] = 1.0
-    sharpness: Optional[float] = 1.0
-
-# 1. Endpoint dành cho Agent khác gọi vào (Chỉ cần truyền JSON prompt)
-@app.post("/api/agent/generate")
-async def agent_generate(req: AgentPromptRequest):
-    """
-    Endpoint chuẩn cho Agent AI bên ngoài gọi vào:
-    Tự gõ prompt vào tab Gemini đang mở -> lấy ảnh -> tách nền BiRefNet -> tạo banner.
-    """
-    job_data = {
-        "mode": "gemini_prompt",
-        "prompt": req.prompt,
-        "title": req.title or f"Gemini: {req.prompt[:30]}",
-        "remove_bg": req.remove_bg,
-        "model_name": req.model_name,
-        "preset": req.preset,
-        "width": req.width,
-        "height": req.height,
-        "bg_color": req.bg_color,
-        "filters": {
-            "brightness": req.brightness,
-            "contrast": req.contrast,
-            "saturation": req.saturation,
-            "sharpness": req.sharpness
-        }
-    }
-    job_id = await queue_mgr.add_job(job_data)
-    return {
-        "job_id": job_id,
-        "status": "queued",
-        "message": "Đã tiếp nhận yêu cầu từ Agent, đang xếp vào hàng đợi tương tác với Gemini."
-    }
-
-# 2. Endpoint upload ảnh thủ công từ Web UI
-@app.post("/api/jobs/create")
-async def create_job(
-    file: UploadFile = File(...),
-    title: str = Form("Banner Job"),
-    remove_bg: bool = Form(True),
-    model_name: str = Form("birefnet-general"),
-    preset: str = Form("youtube_thumbnail"),
-    width: int = Form(1280),
-    height: int = Form(720),
-    bg_color: str = Form("#1e1e2e"),
-    brightness: float = Form(1.0),
-    contrast: float = Form(1.0),
-    saturation: float = Form(1.0),
-    sharpness: float = Form(1.0),
-):
-    unique_name = f"{uuid.uuid4().hex[:8]}_{file.filename}"
-    raw_file_path = RAW_DIR / unique_name
-
-    with open(raw_file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    job_data = {
-        "mode": "upload",
-        "title": title,
-        "raw_filename": unique_name,
-        "remove_bg": remove_bg,
-        "model_name": model_name,
-        "preset": preset,
-        "width": width,
-        "height": height,
-        "bg_color": bg_color,
-        "filters": {
-            "brightness": brightness,
-            "contrast": contrast,
-            "saturation": saturation,
-            "sharpness": sharpness
-        }
-    }
-
-    job_id = await queue_mgr.add_job(job_data)
-    return {"job_id": job_id, "message": "Job đã được đưa vào hàng đợi"}
 
 if __name__ == "__main__":
     import uvicorn

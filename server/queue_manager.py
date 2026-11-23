@@ -1,23 +1,22 @@
 import asyncio
 import json
-import uuid
 import time
+import uuid
 from pathlib import Path
 from typing import Dict, Any, Optional
-from config import BASE_DIR, RAW_DIR, TRANSPARENT_DIR, OUTPUT_DIR
-from pipeline import remove_background, compose_banner
-from gemini_bridge import generate_image_via_gemini_cdp
 
-JOBS_FILE = BASE_DIR / "storage" / "jobs.json"
+from config import JOBS_FILE, RAW_DIR, TRANSPARENT_DIR, OUTPUT_DIR
+from workflow_manager import load_workflow
+from dag_runner import DAGRunner
 
 class QueueManager:
     def __init__(self):
-        self.queue: asyncio.Queue = asyncio.Queue()
-        self.jobs: Dict[str, Dict[str, Any]] = self._load_jobs()
+        self.queue = asyncio.Queue()
+        self.jobs: Dict[str, dict] = self._load_jobs()
         self.is_running = False
-        self._worker_task: Optional[asyncio.Task] = None
+        self._worker_task = None
 
-    def _load_jobs(self) -> Dict[str, Dict[str, Any]]:
+    def _load_jobs(self) -> Dict[str, dict]:
         if JOBS_FILE.exists():
             try:
                 with open(JOBS_FILE, "r", encoding="utf-8") as f:
@@ -27,38 +26,42 @@ class QueueManager:
         return {}
 
     def _save_jobs(self):
+        JOBS_FILE.parent.mkdir(parents=True, exist_ok=True)
         try:
             with open(JOBS_FILE, "w", encoding="utf-8") as f:
                 json.dump(self.jobs, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            print("Lỗi lưu jobs.json:", e)
+            print(f"[QueueManager] Lỗi lưu jobs: {e}")
 
     def start_worker(self):
         if not self.is_running:
             self.is_running = True
             self._worker_task = asyncio.create_task(self._process_queue())
-            print("[Worker] Task queue worker đã khởi động (concurrency = 1)")
+            print("[Worker] DAG Execution Queue Worker đã khởi động (concurrency = 1)")
 
     async def add_job(self, job_data: dict) -> str:
         job_id = str(uuid.uuid4())[:8]
+        # Tải workflow cấu hình hiện tại để khởi tạo các node_status
+        current_workflow = load_workflow()
+        node_status = {n["id"]: "idle" for n in current_workflow.get("nodes", [])}
+
         job_info = {
             "id": job_id,
             "created_at": time.time(),
             "status": "queued",
             "progress": 0,
-            "mode": job_data.get("mode", "upload"),  # "upload" hoặc "gemini_prompt"
+            "node_status": node_status,
+            "mode": job_data.get("mode", "gemini_prompt"),
             "prompt": job_data.get("prompt"),
             "title": job_data.get("title", f"Banner-{job_id}"),
-            "raw_filename": job_data.get("raw_filename"),
-            "remove_bg": job_data.get("remove_bg", True),
-            "model_name": job_data.get("model_name", "birefnet-general"),
-            "preset": job_data.get("preset", "youtube_thumbnail"),
             "width": job_data.get("width", 1280),
             "height": job_data.get("height", 720),
             "bg_color": job_data.get("bg_color", "#1e1e2e"),
-            "filters": job_data.get("filters", {}),
+            "raw_filename": None,
             "transparent_filename": None,
             "output_filename": None,
+            "workflow_snapshot": current_workflow,
+            "initial_payload": job_data,
             "error": None
         }
         self.jobs[job_id] = job_info
@@ -70,7 +73,7 @@ class QueueManager:
         while self.is_running:
             job_id = await self.queue.get()
             try:
-                await self._execute_job(job_id)
+                await self._execute_dag_job(job_id)
             except Exception as e:
                 print(f"[Worker] Lỗi xử lý job {job_id}: {e}")
                 if job_id in self.jobs:
@@ -80,79 +83,53 @@ class QueueManager:
             finally:
                 self.queue.task_done()
 
-    async def _execute_job(self, job_id: str):
+    async def _execute_dag_job(self, job_id: str):
         job = self.jobs[job_id]
-        print(f"[Worker] Bắt đầu xử lý Job: {job_id} - {job['title']} (Mode: {job['mode']})")
+        print(f"[DAG Worker] Bắt đầu xử lý Job qua DAG: {job_id} - {job['title']}")
         job["status"] = "processing"
-        job["progress"] = 5
+        job["progress"] = 10
         self._save_jobs()
 
-        loop = asyncio.get_event_loop()
+        # Context truyền cho toàn bộ các node
+        context = {
+            "job_id": job_id,
+            "initial_payload": job.get("initial_payload", {})
+        }
 
-        # Bước 0: Nếu là mode gemini_prompt -> Tương tác với tab Gemini để lấy ảnh
-        if job["mode"] == "gemini_prompt":
-            job["progress"] = 15
-            self._save_jobs()
-            raw_filename = f"{job_id}_gemini_raw.jpg"
-            raw_path = RAW_DIR / raw_filename
-
-            print(f"[Worker] Đang tương tác với tab Gemini để sinh ảnh cho prompt: {job['prompt']}...")
-            await loop.run_in_executor(
-                None,
-                generate_image_via_gemini_cdp,
-                job["prompt"],
-                raw_path
-            )
-            job["raw_filename"] = raw_filename
-            job["progress"] = 35
-            self._save_jobs()
-        else:
-            raw_path = RAW_DIR / job["raw_filename"]
-            if not raw_path.exists():
-                raise FileNotFoundError(f"Không tìm thấy ảnh gốc: {job['raw_filename']}")
-
-        current_subject_path = raw_path
-
-        # Bước 1: Tách nền bằng BiRefNet (nếu bật)
-        if job["remove_bg"]:
-            job["progress"] = 45
-            self._save_jobs()
+        # Callback cập nhật trạng thái node real-time
+        async def on_node_status(node_id: str, status: str, result_or_err: Any):
+            job["node_status"][node_id] = status
+            if status == "success" and isinstance(result_or_err, dict):
+                if result_or_err.get("raw_filename"):
+                    job["raw_filename"] = result_or_err["raw_filename"]
+                if result_or_err.get("transparent_filename"):
+                    job["transparent_filename"] = result_or_err["transparent_filename"]
+                if result_or_err.get("output_filename"):
+                    job["output_filename"] = result_or_err["output_filename"]
             
-            transparent_filename = f"{job_id}_transparent.png"
-            trans_path = TRANSPARENT_DIR / transparent_filename
-            
-            await loop.run_in_executor(
-                None,
-                remove_background,
-                raw_path,
-                trans_path,
-                job["model_name"]
-            )
-            
-            job["transparent_filename"] = transparent_filename
-            current_subject_path = trans_path
-            job["progress"] = 75
+            # Tính toán % tiến độ hoàn thành dựa trên số node xong
+            total = len(job["node_status"])
+            done = sum(1 for s in job["node_status"].values() if s == "success")
+            job["progress"] = min(95, int((done / max(1, total)) * 100))
             self._save_jobs()
 
-        # Bước 2: Framing Banner, Resize & Filter
-        output_filename = f"{job_id}_banner.png"
-        out_path = OUTPUT_DIR / output_filename
+        workflow_data = job.get("workflow_snapshot") or load_workflow()
 
-        await loop.run_in_executor(
-            None,
-            compose_banner,
-            current_subject_path,
-            out_path,
-            int(job["width"]),
-            int(job["height"]),
-            job["bg_color"],
-            job["filters"]
-        )
+        # Chạy động cơ DAG Runner
+        runner = DAGRunner(workflow_data, context, on_node_status=on_node_status)
+        final_results = await runner.run()
 
-        job["output_filename"] = output_filename
+        # Cập nhật kết quả cuối cùng
         job["status"] = "completed"
         job["progress"] = 100
+        if final_results.get("output_filename"):
+            job["output_filename"] = final_results["output_filename"]
+        if final_results.get("transparent_filename"):
+            job["transparent_filename"] = final_results["transparent_filename"]
+        if final_results.get("raw_filename"):
+            job["raw_filename"] = final_results["raw_filename"]
+
         self._save_jobs()
-        print(f"[Worker] Hoàn thành Job: {job_id}")
+        print(f"[DAG Worker] Hoàn thành trọn vẹn Job: {job_id}")
 
 queue_mgr = QueueManager()
