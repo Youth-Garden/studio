@@ -1,87 +1,70 @@
-# Developer & User Guide: Local Studio
+# Developer & User Guide: Studio Flow Platform
 
-Comprehensive technical guide and operating procedures for **Local Studio** with BiRefNet background matting.
-
----
-
-## 1. System Overview & Data Flow
-
-```text
-User Browser (React UI) 
-   │
-   ├─► POST /api/jobs/create (Multipart Form: Image + Settings)
-   │
-FastAPI Backend (localhost:8000)
-   │
-   ├─► 1. Save uploaded file to `storage/raw/<id>_<filename>`
-   ├─► 2. Push job ID to in-memory `asyncio.Queue`
-   │
-Background Worker (Sequential, Concurrency = 1)
-   │
-   ├── Step 1: BiRefNet Segmentation
-   │     - Converts image to RGB
-   │     - Executes BiRefNet ONNX session
-   │     - Exports 32-bit RGBA PNG to `storage/transparent/<id>_transparent.png`
-   │
-   ├── Step 2: Banner Framing & Enhancement
-   │     - Applies PIL ImageEnhance filters (Contrast, Sharpness, Saturation, Brightness)
-   │     - Creates canvas of target dimensions (e.g., 1280x720)
-   │     - Scales subject proportionally to fit ~85% of canvas area
-   │     - Pastes subject centered on canvas
-   │     - Exports final PNG to `storage/output/<id>_banner.png`
-   │
-   └── Step 3: Complete Job
-         - Updates status to `completed` in `storage/jobs.json`
-         - Frontend polls `/api/jobs` and updates UI live
-```
+A comprehensive operating manual for the **Studio Flow** visual canvas and **Multi-Agent Delegation Gateway**.
 
 ---
 
-## 2. Environment Setup & Configuration
+## 1. System Topology & Dual-Mode Execution
+
+Studio Flow operates in two complementary modes:
+
+### Mode A: Visual DAG Asset Pipeline
+- **Inputs**: Text prompts, image uploads, or webhook triggers.
+- **Processing Nodes**:
+  - `TriggerNode`: Ingests parameters.
+  - `GeminiNode`: Generates raw imagery via Chrome CDP.
+  - `BirefnetNode`: Removes backgrounds with sub-pixel alpha accuracy.
+  - `BannerNode`: Frames subject to canvas presets (16:9, 1:1, 4:5) with enhancements.
+  - `OutputNode`: Writes composed assets to `storage/output/` and serves via HTTP static mounts.
+
+### Mode B: Multi-Agent Code Delegation Gateway
+- **Endpoint**: `POST /api/agent/dispatch`
+- **Payload**:
+  ```json
+  {
+    "plan_path": "docs/plans/feature-plan.md",
+    "caller": "Orca Architect",
+    "extra_note": "Implement immediately without confirmation"
+  }
+  ```
+- **Lifecycle**:
+  1. Gateway receives the request and appends an entry to `storage/agent_dispatch_logs.json`.
+  2. The `AgentBuilderNode` connects to the local Chrome DevTools Protocol port (`9222`).
+  3. Locates an available web agent session (Gemini, Claude, ChatGPT).
+  4. Injects the plan file link with receipt execution instructions and triggers the send event.
+  5. The web agent interacts with AkiMCP (`port 9999`) to apply edits to disk.
+
+---
+
+## 2. Environment Setup
 
 ### Prerequisites
-- Python 3.10 to 3.12 (64-bit)
-- Bun or Node.js (v18+)
+- Windows 10/11 (64-bit).
+- Python 3.10 to 3.12 (virtual environment at `server/.venv`).
+- Bun (v1.2+) or Node.js (v18+).
+- Google Chrome or Microsoft Edge.
+- Tailscale (optional, required only for remote web agent OAuth ingress).
 
-### Customizing Presets (`server/config.py`)
-To add custom banner resolutions, edit `BANNER_PRESETS` in `server/config.py`:
-```python
-BANNER_PRESETS = {
-    "youtube_thumbnail": {"width": 1280, "height": 720, "label": "YouTube Thumbnail (1280x720)"},
-    "fhd_banner": {"width": 1920, "height": 1080, "label": "Full HD 16:9 (1920x1080)"},
-    "fb_landscape": {"width": 1200, "height": 630, "label": "Facebook / Web Banner (1200x630)"},
-    "square_post": {"width": 1080, "height": 1080, "label": "Square Social (1080x1080)"},
-    "twitter_header": {"width": 1500, "height": 500, "label": "Twitter Header (1500x500)"} # Example custom preset
-}
-```
-
----
-
-## 3. GPU Acceleration (Optional)
-
-By default, the server runs on CPU using `onnxruntime`. If you have an NVIDIA GPU with CUDA installed:
-
-1. Activate virtual environment:
+### Running Manually
+1. **Backend**:
    ```powershell
-   cd D:\learn\studio\server
+   cd server
    .\.venv\Scripts\Activate.ps1
+   uvicorn app:app --host 127.0.0.1 --port 8000 --reload
    ```
-2. Uninstall CPU runtime and install GPU runtime:
+2. **Frontend UI**:
    ```powershell
-   pip uninstall -y onnxruntime
-   pip install onnxruntime-gpu
+   cd ui
+   bun run dev
    ```
-This reduces BiRefNet inference time from ~3-5 seconds to **< 0.5 seconds**.
 
 ---
 
-## 4. Troubleshooting & FAQ
+## 3. Realtime Logs & Monitoring
 
-#### Q: Where are the BiRefNet model weights stored?
-**A:** Weights are stored in `C:\Users\<Username>\.rembg\models\birefnet-general\birefnet-general.onnx` (~973 MB). Subsequent runs do not require re-downloading.
-
-#### Q: How to handle CORS errors if changing ports?
-**A:** The FastAPI server is configured with `allow_origins=["*"]` in `server/app.py`, allowing requests from any local frontend host or port.
-
-#### Q: Can I keep the final banner background fully transparent?
-**A:** Yes. In the UI under "Kích thước & Màu nền Banner", toggle the button **"Giữ Alpha trong suốt"** (or set `bg_color="transparent"`).
+1. Open the UI Canvas at `http://localhost:5173`.
+2. Expand the right sidebar.
+3. Switch between tabs:
+   - **Config**: Inspect and adjust parameters for the currently selected node.
+   - **Jobs**: Track historical batch image generation jobs and error traces.
+   - **Agent Logs**: View realtime incoming delegation dispatches, plan paths, caller names, and raw execution terminal logs.
