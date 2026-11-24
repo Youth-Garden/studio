@@ -22,11 +22,19 @@ export function TriggerNode({ id, data }: { id: string; data: any }) {
       hasInput={false}
       hasOutput={true}
     >
-      <div className="space-y-2 pt-0.5">
+      <div className="space-y-2 pt-1 pb-1">
         <label className="text-[10px] text-zinc-400 font-medium">Prompt tạo ảnh / Payload:</label>
-        <p className="bg-[var(--bg-body)] p-2.5 rounded-lg border-0 text-[11px] text-zinc-300 line-clamp-2 leading-relaxed font-mono">
-          {data.prompt || "Chưa có prompt..."}
-        </p>
+        <textarea
+          rows={3}
+          value={data.prompt ?? ""}
+          placeholder="Nhập prompt trực tiếp tại đây..."
+          onChange={(e) => {
+            if (data.onInlineUpdate) {
+              data.onInlineUpdate(id, 'prompt', e.target.value);
+            }
+          }}
+          className="w-full bg-[var(--bg-body)] p-2.5 rounded-lg border-0 text-[11px] text-zinc-200 leading-relaxed font-mono resize-none focus:outline-none focus:ring-1 focus:ring-amber-500/50 mt-1"
+        />
       </div>
     </BaseNodeCard>
   );

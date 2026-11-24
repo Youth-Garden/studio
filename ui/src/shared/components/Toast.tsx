@@ -27,9 +27,9 @@ export const toast = {
 
     const id = Math.random().toString(36).slice(2, 9);
     const item: ToastItem = { id, title, description, variant, duration };
-    // Giới hạn tối đa 3 toast cùng lúc trên màn hình, đẩy cái cũ nhất ra
-    toastsList = [...toastsList.slice(-2), item];
-    listeners.forEach((l) => l(toastsList));
+    // Giới hạn tối đa 4 toast cùng lúc trên màn hình, đẩy cái cũ nhất ra
+    toastsList = [...toastsList.slice(-3), item];
+    listeners.forEach((l) => l([...toastsList]));
 
     if (duration > 0) {
       setTimeout(() => {
@@ -59,16 +59,15 @@ export function Toaster() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2.5 max-w-sm pointer-events-none transition-all duration-300">
       {toasts.map((t) => (
         <div
           key={t.id}
           className={cn(
-            // Phẳng, không dùng border thừa, shadow êm ái hiện đại
-            "pointer-events-auto flex items-start gap-3 rounded-lg p-3.5 shadow-2xl transition-all duration-200 transform translate-y-0 select-none animate-in fade-in-0 slide-in-from-bottom-2",
-            t.variant === "success" && "bg-[#18261e] text-emerald-200",
-            t.variant === "error" && "bg-[#291818] text-red-200",
-            t.variant === "default" && "bg-[#262628] text-zinc-100"
+            "pointer-events-auto flex items-start gap-3 rounded-xl p-3.5 shadow-2xl transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] select-none animate-in fade-in-0 slide-in-from-bottom-5",
+            t.variant === "success" && "bg-[#18261e] text-emerald-200 border-0",
+            t.variant === "error" && "bg-[#291818] text-red-200 border-0",
+            t.variant === "default" && "bg-[#262628] text-zinc-100 border-0"
           )}
         >
           {t.variant === "success" && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />}

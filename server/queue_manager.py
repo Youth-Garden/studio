@@ -39,10 +39,10 @@ class QueueManager:
             self._worker_task = asyncio.create_task(self._process_queue())
             print("[Worker] DAG Execution Queue Worker đã khởi động (concurrency = 1)")
 
-    async def add_job(self, job_data: dict) -> str:
+    async def add_job(self, job_data: dict, custom_workflow: Optional[dict] = None) -> str:
         job_id = str(uuid.uuid4())[:8]
-        # Tải workflow cấu hình hiện tại để khởi tạo các node_status
-        current_workflow = load_workflow()
+        # Sử dụng custom_workflow nếu có, fallback về workflow mặc định
+        current_workflow = custom_workflow or load_workflow()
         node_status = {n["id"]: "idle" for n in current_workflow.get("nodes", [])}
 
         job_info = {

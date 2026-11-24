@@ -76,10 +76,17 @@ class WorkflowExecuteRequest(BaseModel):
     contrast: Optional[float] = 1.05
     sharpness: Optional[float] = 1.2
     model_name: Optional[str] = "birefnet-general"
+    workflow_id: Optional[str] = None
+    workflow_data: Optional[dict] = None
 
 # Webhook Endpoint để Agent khác hoặc nút "Run" trên Canvas gọi vào
 @app.post("/api/workflow/execute")
 async def execute_workflow(req: WorkflowExecuteRequest):
+    # Ưu tiên lấy workflow snapshot được truyền từ client (canvas hiện tại) hoặc theo workflow_id
+    custom_workflow = req.workflow_data
+    if not custom_workflow and req.workflow_id:
+        custom_workflow = get_workflow_by_id(req.workflow_id)
+
     job_data = {
         "mode": "gemini_prompt",
         "prompt": req.prompt,
@@ -97,7 +104,7 @@ async def execute_workflow(req: WorkflowExecuteRequest):
             "saturation": 1.1
         }
     }
-    job_id = await queue_mgr.add_job(job_data)
+    job_id = await queue_mgr.add_job(job_data, custom_workflow=custom_workflow)
     return {
         "job_id": job_id,
         "status": "queued",

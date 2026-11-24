@@ -185,27 +185,32 @@ export function ExecutionHistoryPanel({
         </div>
 
         <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
-          {historyJobs.map((job) => (
-            <Card
-              key={job.id}
-              role="button"
-              tabIndex={0}
-              variant="solid"
-              active={activeJob?.id === job.id}
-              onClick={() => onSelectJob(job)}
-              className="p-2.5 rounded-lg border-0 transition-colors cursor-pointer flex items-center justify-between"
-            >
-              <div className="truncate pr-2">
-                <p className="font-medium text-zinc-200 truncate text-[11px]">{job.title}</p>
-                <p className="text-[10px] text-zinc-500 font-mono">
-                  {new Date(job.created_at * 1000).toLocaleTimeString()} • {job.width}x{job.height}
-                </p>
-              </div>
-              {job.status === 'completed' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
-              {job.status === 'processing' && <RefreshCw className="w-3.5 h-3.5 text-zinc-400 animate-spin shrink-0" />}
-              {job.status === 'failed' && <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />}
-            </Card>
-          ))}
+          {historyJobs.map((job) => {
+            const isSelected = activeJob?.id === job.id;
+            return (
+              <Card
+                key={job.id}
+                role="button"
+                tabIndex={0}
+                variant="solid"
+                active={isSelected}
+                onClick={() => onSelectJob(job)}
+                className={`p-2.5 rounded-lg border-0 transition-colors cursor-pointer flex items-center justify-between ${
+                  isSelected ? '!bg-[#2d2d31] ring-1 ring-white/10' : 'bg-[var(--bg-card)] hover:bg-[var(--bg-surface)]'
+                }`}
+              >
+                <div className="truncate pr-2">
+                  <p className="font-medium text-zinc-200 truncate text-[11px]">{job.title}</p>
+                  <p className="text-[10px] text-zinc-500 font-mono">
+                    {new Date(job.created_at * 1000).toLocaleTimeString()} • {job.width}x{job.height}
+                  </p>
+                </div>
+                {job.status === 'completed' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                {job.status === 'processing' && <RefreshCw className="w-3.5 h-3.5 text-zinc-400 animate-spin shrink-0" />}
+                {job.status === 'failed' && <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />}
+              </Card>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -45,7 +45,7 @@ function PortalItemWrapper({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`w-full max-w-2xl transform will-change-transform flex justify-center ${
+        className={`w-full max-w-4xl transform will-change-transform flex justify-center ${
           isVisible
             ? "opacity-100 scale-100 translate-y-0 transition-all duration-150 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)]"
             : "opacity-0 scale-[0.90] translate-y-1 transition-all duration-100 ease-in"

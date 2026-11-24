@@ -100,8 +100,11 @@ YÊU CẦU BẮT BUỘC DÀNH CHO BUILDER AGENT:
 1. Đọc kỹ file plan trên và TỰ ĐỘNG THỰC THI NGAY bằng công cụ AkiMCP (aki__edit_file, aki__write_file, aki__run_cmd).
 2. TUYỆT ĐỐI KHÔNG DỪNG LẠI HỎI Ý KIẾN hay yêu cầu người dùng xác nhận 'Tiếp tục' / 'Proceed'. Phải tự động ghi file trực tiếp trên ổ cứng.
 3. Luôn gọi 'aki__akidevrule_context' để nhận mã receipt hợp lệ trước khi thao tác file.
+4. QUẢN LÝ VÒNG ĐỜI PLAN: Sau khi hoàn tất triển khai và kiểm tra code xong, hãy tự động di chuyển file plan này vào thư mục archive:
+   - Dùng lệnh 'aki__create_directory' tạo thư mục con 'archive' (nếu chưa có).
+   - Dùng lệnh 'aki__move_file' di chuyển file plan này vào thư mục 'archive' (ví dụ: chuyển sang '.../docs/plans/archive/${path.basename(absPlan)}').
 ${extraInstructions ? `\nLưu ý bổ sung: ${extraInstructions}\n` : ''}
-Bắt tay vào thi công trực tiếp ngay bây giờ và chỉ phản hồi khi toàn bộ thay đổi đã hoàn tất.`;
+Bắt tay vào thi công trực tiếp ngay bây giờ và chỉ phản hồi khi toàn bộ thay đổi và di chuyển plan vào archive đã hoàn tất.`;
 
   console.log(`[Dispatcher] Đang kích hoạt focus và nhập nội dung...`);
 

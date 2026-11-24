@@ -54,17 +54,17 @@ export function EditorSidebar({
       {/* Sidebar Content */}
       <div 
         style={{ width: isSidebarOpen ? `${sidebarWidth}px` : '0px' }}
-        className={`h-full bg-[var(--bg-surface)] flex flex-col z-20 shrink-0 ${
-          isSidebarOpen ? 'overflow-hidden' : 'overflow-hidden pointer-events-none'
+        className={`h-full bg-[var(--bg-surface)] flex flex-col z-20 shrink-0 transition-[width] duration-250 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden ${
+          !isSidebarOpen && 'pointer-events-none'
         }`}
       >
         <TransitionEffect
           show={isSidebarOpen}
-          enter="opacity-0 translate-x-2"
+          enter="opacity-0 translate-x-3"
           enterActive="opacity-100 translate-x-0 transition-all duration-250 ease-out"
           exit="opacity-100 translate-x-0"
-          exitActive="opacity-0 translate-x-2 transition-all duration-150 ease-in"
-          duration={150}
+          exitActive="opacity-0 translate-x-3 transition-all duration-200 ease-in"
+          duration={200}
           className="h-full flex flex-col w-full"
         >
           {/* Header Tab */}
@@ -80,7 +80,7 @@ export function EditorSidebar({
                   <span>Jobs</span>
                 </TabsTrigger>
                 <TabsTrigger value="agent-logs" className="flex-1 gap-1 py-1 text-[11px]">
-                  <Bot className="w-3 h-3 text-emerald-400" />
+                  <Bot className="w-3 h-3 text-zinc-400" />
                   <span>Agent Logs</span>
                 </TabsTrigger>
               </TabsList>

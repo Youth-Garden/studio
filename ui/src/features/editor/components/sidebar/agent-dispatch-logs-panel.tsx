@@ -6,15 +6,19 @@ import {
   Loader2, 
   RefreshCw,
   FileCode2,
-  Clock
+  Clock,
+  Maximize2
 } from 'lucide-react';
-import { Card, Button, Badge } from '../../../../shared/components';
+import { Card, Button, Badge, Tooltip } from '../../../../shared/components';
+import { usePortal } from '../../../../shared/hooks/use-portal';
+import { LogViewerModal, type LogViewerModalData } from '../../../modals/log-viewer-modal';
 import type { AgentDispatchLog } from '../../types/editor.types';
 
 export function AgentDispatchLogsPanel() {
   const [logs, setLogs] = useState<AgentDispatchLog[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedLog, setSelectedLog] = useState<AgentDispatchLog | null>(null);
+  const [presentLogModal] = usePortal<LogViewerModalData>(LogViewerModal);
 
   const fetchLogs = async () => {
     setIsLoading(true);
@@ -51,15 +55,17 @@ export function AgentDispatchLogsPanel() {
         <span className="text-[11px] font-medium text-zinc-400">
           Lịch sử điều phối ({logs.length})
         </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={fetchLogs}
-          disabled={isLoading}
-          className="h-6 px-2 text-zinc-400 hover:text-zinc-200"
-        >
-          <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} />
-        </Button>
+        <Tooltip content="Làm mới danh sách log">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={fetchLogs}
+            disabled={isLoading}
+            className="h-6 px-2 text-zinc-400 hover:text-zinc-200"
+          >
+            <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
+        </Tooltip>
       </div>
 
       {logs.length === 0 ? (
@@ -71,7 +77,7 @@ export function AgentDispatchLogsPanel() {
           </p>
         </Card>
       ) : (
-        <div className="space-y-2 overflow-y-auto max-h-[380px] pr-1">
+        <div className="space-y-2 overflow-y-auto max-h-[360px] pr-1">
           {logs.map((log) => {
             const isSelected = selectedLog?.id === log.id;
             return (
@@ -83,7 +89,7 @@ export function AgentDispatchLogsPanel() {
                 active={isSelected}
                 onClick={() => setSelectedLog(log)}
                 className={`p-3 rounded-xl cursor-pointer border-0 transition-colors ${
-                  isSelected ? 'bg-[var(--bg-surface)]' : 'bg-[var(--bg-card)] hover:bg-[var(--bg-surface)]'
+                  isSelected ? 'bg-[var(--bg-surface)] ring-1 ring-white/10' : 'bg-[var(--bg-card)] hover:bg-[var(--bg-surface)]'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
@@ -94,19 +100,19 @@ export function AgentDispatchLogsPanel() {
                   {log.status === 'success' && (
                     <Badge variant="success" className="gap-1 text-[10px] py-0 border-0">
                       <CheckCircle2 className="w-2.5 h-2.5" />
-                      Success
+                      Thành công
                     </Badge>
                   )}
                   {log.status === 'failed' && (
                     <Badge variant="outline" className="gap-1 text-[10px] py-0 text-rose-400 bg-rose-500/10 border-0">
                       <AlertCircle className="w-2.5 h-2.5" />
-                      Failed
+                      Thất bại
                     </Badge>
                   )}
                   {log.status === 'processing' && (
                     <Badge variant="outline" className="gap-1 text-[10px] py-0 text-amber-300 bg-amber-500/10 border-0">
                       <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                      Working
+                      Đang xử lý
                     </Badge>
                   )}
                 </div>
@@ -121,7 +127,7 @@ export function AgentDispatchLogsPanel() {
 
                 {log.extra_note && (
                   <p className="mt-1.5 text-[10px] text-zinc-400 bg-[var(--bg-body)] px-2 py-1 rounded-lg truncate">
-                    Note: {log.extra_note}
+                    Ghi chú: {log.extra_note}
                   </p>
                 )}
               </Card>
@@ -134,10 +140,26 @@ export function AgentDispatchLogsPanel() {
         <div className="mt-2 pt-2 border-t border-[var(--border-color)] space-y-2">
           <div className="flex items-center justify-between text-[11px]">
             <span className="text-zinc-400 font-medium">Chi tiết thực thi ({selectedLog.id})</span>
-            <span className="text-[10px] font-mono text-zinc-500">{formatTime(selectedLog.timestamp)}</span>
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] font-mono text-zinc-500 mr-1">{formatTime(selectedLog.timestamp)}</span>
+              <Tooltip content="Mở toàn màn hình xem chi tiết">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => presentLogModal({ log: selectedLog })}
+                  className="h-5 w-5 text-zinc-400 hover:text-zinc-200"
+                >
+                  <Maximize2 className="w-3 h-3" />
+                </Button>
+              </Tooltip>
+            </div>
           </div>
 
-          <div className="bg-[var(--bg-body)] p-3 rounded-xl border-0 font-mono text-[10px] text-zinc-300 max-h-40 overflow-y-auto whitespace-pre-wrap leading-relaxed">
+          <div 
+            onClick={() => presentLogModal({ log: selectedLog })}
+            title="Click để phóng to log"
+            className="bg-[var(--bg-body)] p-3 rounded-xl border-0 font-mono text-[10px] text-zinc-300 max-h-40 overflow-y-auto whitespace-pre-wrap leading-relaxed cursor-pointer hover:bg-zinc-900/60 transition-colors"
+          >
             {selectedLog.error ? (
               <span className="text-rose-400">{selectedLog.error}</span>
             ) : selectedLog.output ? (

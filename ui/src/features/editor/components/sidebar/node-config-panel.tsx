@@ -48,22 +48,23 @@ export function NodeConfigPanel({
         </CardHeader>
         <CardContent className="p-3.5 space-y-4">
           {/* Node Trigger Form */}
-          {selectedNode.id === 'node-trigger' && (
-            <div className="space-y-1.5">
-              <label className="text-[11px] text-zinc-400 font-medium">Prompt Gemini:</label>
+          {(selectedNode.type === 'triggerNode' || selectedNode.id.includes('trigger')) && (
+            <div className="space-y-2 mb-4">
+              <label className="text-[11px] text-zinc-400 font-medium">Prompt tạo ảnh / Payload:</label>
               <Textarea
                 rows={4}
                 value={data.prompt || ''}
+                placeholder="Nhập nội dung prompt chi tiết..."
                 onChange={(e) => onUpdateNodeData('prompt', e.target.value)}
               />
-              <div className="text-[10px] text-zinc-400 pt-0.5">
+              <div className="text-[10px] text-zinc-400 pt-1">
                 Endpoint: <code className="text-zinc-200 font-mono">POST /api/workflow/execute</code>
               </div>
             </div>
           )}
 
           {/* Node Banner Form */}
-          {selectedNode.id === 'node-banner' && (
+          {(selectedNode.type === 'bannerNode' || selectedNode.id.includes('banner')) && (
             <div className="space-y-2.5">
               <FormField label="Preset Kích thước:">
                 <Select
@@ -174,8 +175,8 @@ export function NodeConfigPanel({
             </div>
           )}
 
-          {/* Runtime JSON CodeBlock có gap giãn cách rộng rãi */}
-          <div className="pt-3 border-t border-[var(--border-color)] space-y-2">
+          {/* Runtime JSON CodeBlock có khoảng cách gap rộng rãi, rõ ràng */}
+          <div className="pt-5 mt-4 border-t border-[var(--border-color)] space-y-2.5">
             <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block">
               Thông số Runtime JSON:
             </label>

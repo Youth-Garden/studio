@@ -12,10 +12,10 @@ export const cardVariants = cva(
         subtle: "bg-[var(--bg-surface)]",
         solid: "bg-[var(--bg-card)] cursor-pointer hover:bg-[var(--bg-surface)]",
         interactive: "bg-[var(--bg-surface)] cursor-pointer hover:bg-[var(--bg-card)]",
-        active: "bg-[var(--bg-surface)] text-[var(--text-primary)] cursor-pointer",
+        active: "bg-[#2d2d31] text-[var(--text-primary)] cursor-pointer ring-1 ring-white/10",
       },
       active: {
-        true: "cursor-pointer bg-[var(--bg-surface)]",
+        true: "cursor-pointer bg-[#2d2d31] ring-1 ring-white/10",
         false: "",
       },
     },

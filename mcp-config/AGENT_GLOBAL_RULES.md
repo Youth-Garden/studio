@@ -21,6 +21,7 @@
 - Luôn loại bỏ các unused imports khi sửa file.
 - Tuân thủ cấu trúc component và design system của project đang làm việc (ví dụ trong `ezgame`: dùng component `<Button>` với `variant` và `size`, không ghi đè custom style).
 - Có quyền tự chạy `bun test` hoặc `bunx tsc --noEmit` để xác thực sau khi sửa code.
+- **Plan Lifecycle (Archive)**: Sau khi thực hiện xong toàn bộ các bước trong file plan, hãy tự động di chuyển file plan đó vào thư mục `archive/` cùng cấp (sử dụng `aki__create_directory` nếu chưa có thư mục `archive` và `aki__move_file` để chuyển file).
 
 ## 5. Git Safety
 - Không tự ý chạy `git commit` hay `git push` nếu người dùng chưa yêu cầu rõ ràng.
