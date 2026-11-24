@@ -1,0 +1,50 @@
+{
+  "name": "Multi-Agent Code Delegation",
+  "description": "Workflow tự động tiếp nhận bản kế hoạch từ Orca Architect và điều phối thi công code trên Web Builder Agent qua AkiMCP",
+  "nodes": [
+    {
+      "id": "node-orca-trigger",
+      "type": "triggerNode",
+      "position": { "x": 100, "y": 200 },
+      "data": {
+        "title": "1. Orca Plan Trigger",
+        "mode": "api_webhook",
+        "prompt": "Listening on POST http://localhost:8000/api/agent/dispatch"
+      }
+    },
+    {
+      "id": "node-agent-builder",
+      "type": "agentBuilderNode",
+      "position": { "x": 450, "y": 200 },
+      "data": {
+        "title": "2. Agent Code Builder",
+        "targetAgent": "Gemini Web (AkiMCP)",
+        "port": 9222,
+        "maxTabs": 4
+      }
+    },
+    {
+      "id": "node-output",
+      "type": "outputNode",
+      "position": { "x": 800, "y": 200 },
+      "data": {
+        "title": "3. Code Verification & Log",
+        "autoSave": true
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-orca-to-builder",
+      "source": "node-orca-trigger",
+      "target": "node-agent-builder",
+      "animated": true
+    },
+    {
+      "id": "e-builder-to-output",
+      "source": "node-agent-builder",
+      "target": "node-output",
+      "animated": true
+    }
+  ]
+}

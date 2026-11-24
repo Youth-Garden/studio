@@ -8,6 +8,7 @@ from .output_node import OutputNode
 from .multi_aspect_node import MultiAspectNode
 from .watermark_node import WatermarkNode
 from .telegram_node import TelegramNode
+from .agent_builder_node import AgentBuilderNode
 
 NODE_REGISTRY: Dict[str, Type[BaseNode]] = {
     "triggerNode": TriggerNode,
@@ -18,6 +19,7 @@ NODE_REGISTRY: Dict[str, Type[BaseNode]] = {
     "multiAspectNode": MultiAspectNode,
     "watermarkNode": WatermarkNode,
     "telegramNode": TelegramNode,
+    "agentBuilderNode": AgentBuilderNode,
 }
 
 def create_node_instance(node_id: str, node_type: str, config: dict) -> BaseNode:

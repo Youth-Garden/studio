@@ -2,49 +2,54 @@
 
 @layer base {
   :root {
-    --bg-body: #ffffff;
-    --bg-surface: #f4f4f5;
-    --bg-card: #ffffff;
-    --border-color: rgba(0, 0, 0, 0.1);
-    --border-emphasized: #71717a;
-    --text-primary: #18181b;
-    --text-secondary: #71717a;
-    --accent: #18181b;
-    --on-accent: #ffffff;
-  }
+    /* Rainbow Button Color Tokens */
+    --color-1: hsl(0 100% 63%);
+    --color-2: hsl(270 100% 63%);
+    --color-3: hsl(210 100% 63%);
+    --color-4: hsl(195 100% 63%);
+    --color-5: hsl(90 100% 63%);
 
-  :root,
-  :root[data-theme="light"] {
-    /* Theme: Sáng Hiện Đại (Clean Studio Light) */
-    --bg-body: #f4f4f5;
-    --bg-surface: #ffffff;
-    --bg-card: #ffffff;
-    --border-color: rgba(0, 0, 0, 0.08);
-    --border-emphasized: #e4e4e7;
-    --text-primary: #18181b;
-    --text-secondary: #71717a;
-    --accent: #18181b;
-    --on-accent: #ffffff;
-  }
-
-  .dark,
-  :root[data-theme="dark"] {
     /* Theme: Tối Trung Tính (Meta Neutral) */
     --bg-body: #1b1b1b;
-    --bg-surface: #262626;
-    --bg-card: #1b1b1b;
+    --bg-surface: #222222;
+    --bg-card: #262628;
     --border-color: rgba(255, 255, 255, 0.08);
     --border-emphasized: #525252;
     --text-primary: #ffffff;
-    --text-secondary: #9e9e9e;
+    --text-secondary: #a1a1aa;
     --accent: #f1f1f1;
     --on-accent: #111111;
   }
 
+  :root[data-theme="dark"] {
+    --bg-body: #1b1b1b;
+    --bg-surface: #222222;
+    --bg-card: #262628;
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-emphasized: #525252;
+    --text-primary: #ffffff;
+    --text-secondary: #a1a1aa;
+    --accent: #f1f1f1;
+    --on-accent: #111111;
+  }
+
+  :root[data-theme="light"] {
+    /* Theme: Sáng Tinh Tế (Clean Modern Studio Light) */
+    --bg-body: #f4f4f6;
+    --bg-surface: #ffffff;
+    --bg-card: #ffffff;
+    --border-color: rgba(0, 0, 0, 0.08);
+    --border-emphasized: #d4d4d8;
+    --text-primary: #18181b;
+    --text-secondary: #71717a;
+    --accent: #18181b;
+    --on-accent: #ffffff;
+  }
+
   :root[data-theme="midnight"] {
     /* Theme: Xám Đêm (Midnight Zinc) */
-    --bg-body: #18181b;
-    --bg-surface: #27272a;
+    --bg-body: #141416;
+    --bg-surface: #1e1e22;
     --bg-card: #18181b;
     --border-color: rgba(255, 255, 255, 0.08);
     --border-emphasized: #52525b;
@@ -57,8 +62,8 @@
   :root[data-theme="amoled"] {
     /* Theme: Đen Tuyệt Đối (AMOLED Pure Black) */
     --bg-body: #000000;
-    --bg-surface: #101012;
-    --bg-card: #000000;
+    --bg-surface: #0a0a0c;
+    --bg-card: #0e0e10;
     --border-color: rgba(255, 255, 255, 0.12);
     --border-emphasized: #27272a;
     --text-primary: #ffffff;
@@ -66,6 +71,39 @@
     --accent: #ffffff;
     --on-accent: #000000;
   }
+}
+
+/* Rainbow animation */
+@keyframes rainbow {
+  0% {
+    background-position: 0%;
+  }
+  100% {
+    background-position: 200%;
+  }
+}
+
+.animate-rainbow {
+  animation: rainbow 2s infinite linear;
+}
+
+/* Material Ripple Wave Animation */
+@keyframes ripple {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.35;
+  }
+  60% {
+    opacity: 0.2;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+
+.animate-ripple {
+  animation: ripple 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
 
 body {
@@ -84,22 +122,22 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1b1b1b;
+  background: var(--bg-body);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #333333;
+  background: #3f3f46;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #525252;
+  background: #52525b;
 }
 
 /* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #333333 #1b1b1b;
+  scrollbar-color: #3f3f46 var(--bg-body);
 }
 
 /* Nền ca-rô trong suốt chuẩn đồ họa Photoshop / Figma để nhận biết PNG tách nền */
@@ -112,98 +150,4 @@ body {
     linear-gradient(-45deg, transparent 75%, #333333 75%);
   background-size: 16px 16px;
   background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
-}
-
-/* Hardware-Accelerated Ripple Animation */
-@keyframes ripple-effect {
-  0% {
-    transform: translate(-50%, -50%) scale(0);
-    opacity: 0.45;
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 0;
-  }
-}
-
-.animate-ripple {
-  animation: ripple-effect 0.55s ease-out forwards;
-  will-change: transform, opacity;
-}
-
-/* Shadcn-style Text & Element Shimmer Utility */
-@keyframes tw-shimmer {
-  0% {
-    background-position: calc(-100% - var(--shimmer-spread, 200px)) 0;
-  }
-  100% {
-    background-position: calc(100% + var(--shimmer-spread, 200px)) 0;
-  }
-}
-
-.shimmer {
-  --shimmer-duration: 2s;
-  --shimmer-color: rgba(255, 255, 255, 0.45);
-  --shimmer-spread: 120px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--shimmer-color) 50%,
-    transparent 100%
-  );
-  background-size: 200% 100%;
-  animation: tw-shimmer var(--shimmer-duration) linear infinite;
-  background-clip: text;
-  -webkit-background-clip: text;
-}
-
-/* Subtle Shimmer Border / Background Overlay for Interactive Components */
-.shimmer-surface {
-  position: relative;
-  overflow: hidden;
-}
-
-.shimmer-surface::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -150%;
-  width: 150%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.08) 50%,
-    transparent 100%
-  );
-  transform: skewX(-20deg);
-  pointer-events: none;
-  animation: surface-shimmer 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-
-@keyframes surface-shimmer {
-  0% {
-    left: -150%;
-  }
-  50%, 100% {
-    left: 150%;
-  }
-}
-
-/* Dropdown scale & fade animation */
-@keyframes dropdown-enter {
-  0% {
-    opacity: 0;
-    transform: scale(0.92) translateY(-4px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-.animate-dropdown {
-  animation: dropdown-enter 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  transform-origin: top right;
-  will-change: transform, opacity;
 }

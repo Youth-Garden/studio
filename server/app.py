@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from config import RAW_DIR, TRANSPARENT_DIR, OUTPUT_DIR, BANNER_PRESETS
+from config import RAW_DIR, TRANSPARENT_DIR, OUTPUT_DIR, BANNER_PRESETS, BASE_DIR
 from queue_manager import queue_mgr
 from workflow_manager import (
     load_workflow, 
@@ -103,6 +103,82 @@ async def execute_workflow(req: WorkflowExecuteRequest):
         "status": "queued",
         "message": "Workflow đã được kích hoạt và đưa vào hàng đợi."
     }
+
+import json
+import time
+
+AGENT_LOGS_FILE = BASE_DIR / "storage" / "agent_dispatch_logs.json"
+
+def load_agent_logs():
+    if AGENT_LOGS_FILE.exists():
+        try:
+            with open(AGENT_LOGS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return []
+    return []
+
+def save_agent_log_entry(entry: dict):
+    logs = load_agent_logs()
+    logs.insert(0, entry)  # Mới nhất lên đầu
+    # Giữ tối đa 100 log gần nhất
+    logs = logs[:100]
+    AGENT_LOGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(AGENT_LOGS_FILE, "w", encoding="utf-8") as f:
+        json.dump(logs, f, ensure_ascii=False, indent=2)
+
+class AgentDispatchRequest(BaseModel):
+    plan_path: str
+    extra_note: Optional[str] = ""
+    target_agent: Optional[str] = "gemini"
+    caller: Optional[str] = "Orca Architect"
+
+@app.get("/api/agent/dispatch-logs")
+def get_agent_dispatch_logs():
+    return load_agent_logs()
+
+@app.post("/api/agent/dispatch")
+async def dispatch_plan_to_agent(req: AgentDispatchRequest):
+    """
+    Endpoint Gateway tập trung cho Orca, Claude Code hoặc bất kỳ Agent nào
+    gửi yêu cầu thi công code sang Web Builder Agent (Gemini / Claude).
+    """
+    plan_file = Path(req.plan_path).resolve()
+    if not plan_file.exists():
+        raise HTTPException(status_code=400, detail=f"File plan không tồn tại: {req.plan_path}")
+
+    log_entry = {
+        "id": str(uuid.uuid4())[:8],
+        "timestamp": int(time.time()),
+        "caller": req.caller or "Orca Architect",
+        "plan_name": plan_file.name,
+        "plan_path": str(plan_file),
+        "extra_note": req.extra_note,
+        "target_agent": req.target_agent or "gemini",
+        "status": "processing",
+        "output": None,
+        "error": None
+    }
+
+    from nodes.agent_builder_node import AgentBuilderNode
+    node = AgentBuilderNode(node_id="gateway_agent_builder", config={"plan_path": str(plan_file), "extra_note": req.extra_note})
+    
+    try:
+        result = await node.execute(inputs={"plan_path": str(plan_file), "extra_note": req.extra_note}, context={})
+        log_entry["status"] = "success"
+        log_entry["output"] = result.get("output", "")
+        save_agent_log_entry(log_entry)
+        return {
+            "success": True,
+            "message": "Đã điều phối thành công sang Web Agent!",
+            "details": result,
+            "log": log_entry
+        }
+    except Exception as e:
+        log_entry["status"] = "failed"
+        log_entry["error"] = str(e)
+        save_agent_log_entry(log_entry)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/presets")
 def get_presets():

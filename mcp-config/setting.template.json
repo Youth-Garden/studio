@@ -1,0 +1,18 @@
+{
+  "folders": [
+    "D:\\learn",
+    "D:\\work"
+  ],
+  "shell": {
+    "allowlist": {
+      "git": null,
+      "npm": null,
+      "npx": null,
+      "node": null,
+      "python": null,
+      "tsc": null,
+      "bun": null,
+      "bunx": null
+    }
+  }
+}

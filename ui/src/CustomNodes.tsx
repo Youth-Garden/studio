@@ -1,137 +1,83 @@
-import { Handle, Position } from '@xyflow/react';
 import { 
   Zap, 
   Bot, 
   Layers, 
   LayoutTemplate, 
   Image as ImageIcon,
-  Split,
-  Stamp,
-  Send
+  Split, 
+  Stamp, 
+  Send, 
+  Cpu 
 } from 'lucide-react';
-import { Badge } from './components/ui/Badge';
-import { StatusBadge, type JobStatusType } from './components/ui/StatusBadge';
-import { NodeToolbar } from './components/ui/NodeToolbar';
-
-function getNodeBorderClass(status?: string, isBypassed?: boolean) {
-  if (isBypassed) return 'border-zinc-700 opacity-60 line-through';
-  if (status === 'running' || status === 'processing') return 'border-amber-500 ring-2 ring-amber-500/30';
-  if (status === 'success' || status === 'completed') return 'border-emerald-600/90';
-  if (status === 'error' || status === 'failed') return 'border-red-500 ring-2 ring-red-500/30';
-  return 'border-zinc-800';
-}
+import { BaseNodeCard } from './features/editor/components/nodes/base-node-card';
 
 export function TriggerNode({ id, data }: { id: string; data: any }) {
   return (
-    <div className={`group relative w-64 bg-zinc-900 border rounded-lg shadow-sm text-xs text-zinc-100 transition-all ${getNodeBorderClass(data.status, data.isBypassed)}`}>
-      <NodeToolbar
-        nodeId={id}
-        isBypassed={data.isBypassed}
-        onInspect={data.onInspect}
-        onTestStep={data.onTestStep}
-        onToggleBypass={data.onToggleBypass}
-        onDuplicate={data.onDuplicate}
-        onDelete={data.onDelete}
-      />
-      <div className="px-3 py-2 border-b border-zinc-800 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 font-medium text-zinc-200">
-          <Zap className="w-3.5 h-3.5 text-zinc-400" />
-          <span>{data.title || "Trigger / Input"}</span>
-        </div>
-        {data.status ? <StatusBadge status={data.status as JobStatusType} /> : <Badge variant="secondary">Webhook</Badge>}
-      </div>
-      <div className="p-3 space-y-1.5">
-        <label className="text-[10px] text-zinc-400 font-medium">Prompt tạo ảnh:</label>
-        <p className="bg-zinc-950 p-2 rounded border border-zinc-800/80 text-[11px] text-zinc-300 line-clamp-2 leading-relaxed">
+    <BaseNodeCard
+      id={id}
+      data={data}
+      icon={<Zap className="w-3.5 h-3.5 text-zinc-400" />}
+      title={data.title || "Trigger / Input"}
+      badgeLabel="Webhook"
+      hasInput={false}
+      hasOutput={true}
+    >
+      <div className="space-y-2 pt-0.5">
+        <label className="text-[10px] text-zinc-400 font-medium">Prompt tạo ảnh / Payload:</label>
+        <p className="bg-[var(--bg-body)] p-2.5 rounded-lg border-0 text-[11px] text-zinc-300 line-clamp-2 leading-relaxed font-mono">
           {data.prompt || "Chưa có prompt..."}
         </p>
       </div>
-      <Handle type="source" position={Position.Right} className="w-2.5 h-2.5 bg-zinc-500 border border-zinc-900 rounded-full" />
-    </div>
+    </BaseNodeCard>
   );
 }
 
 export function GeminiNode({ id, data }: { id: string; data: any }) {
   return (
-    <div className={`group relative w-64 bg-zinc-900 border rounded-lg shadow-sm text-xs text-zinc-100 transition-all ${getNodeBorderClass(data.status, data.isBypassed)}`}>
-      <NodeToolbar
-        nodeId={id}
-        isBypassed={data.isBypassed}
-        onInspect={data.onInspect}
-        onTestStep={data.onTestStep}
-        onToggleBypass={data.onToggleBypass}
-        onDuplicate={data.onDuplicate}
-        onDelete={data.onDelete}
-      />
-      <Handle type="target" position={Position.Left} className="w-2.5 h-2.5 bg-zinc-500 border border-zinc-900 rounded-full" />
-      <div className="px-3 py-2 border-b border-zinc-800 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 font-medium text-zinc-200">
-          <Bot className="w-3.5 h-3.5 text-zinc-400" />
-          <span>{data.title || "Gemini CDP"}</span>
-        </div>
-        {data.status ? <StatusBadge status={data.status as JobStatusType} /> : <Badge variant="secondary">Port 9222</Badge>}
-      </div>
-      <div className="p-3 space-y-1 text-[11px] text-zinc-400">
-        <p>• Điều khiển tab Chrome Gemini</p>
+    <BaseNodeCard
+      id={id}
+      data={data}
+      icon={<Bot className="w-3.5 h-3.5 text-zinc-400" />}
+      title={data.title || "Gemini CDP"}
+      badgeLabel="Port 9222"
+    >
+      <div className="space-y-1 text-zinc-400">
+        <p className="text-zinc-300">• Điều khiển tab Chrome Gemini CDP</p>
         <p>• Tự gõ prompt & bắt ảnh kết quả</p>
       </div>
-      <Handle type="source" position={Position.Right} className="w-2.5 h-2.5 bg-zinc-500 border border-zinc-900 rounded-full" />
-    </div>
+    </BaseNodeCard>
   );
 }
 
 export function BirefnetNode({ id, data }: { id: string; data: any }) {
   return (
-    <div className={`group relative w-64 bg-zinc-900 border rounded-lg shadow-sm text-xs text-zinc-100 transition-all ${getNodeBorderClass(data.status, data.isBypassed)}`}>
-      <NodeToolbar
-        nodeId={id}
-        isBypassed={data.isBypassed}
-        onInspect={data.onInspect}
-        onTestStep={data.onTestStep}
-        onToggleBypass={data.onToggleBypass}
-        onDuplicate={data.onDuplicate}
-        onDelete={data.onDelete}
-      />
-      <Handle type="target" position={Position.Left} className="w-2.5 h-2.5 bg-zinc-500 border border-zinc-900 rounded-full" />
-      <div className="px-3 py-2 border-b border-zinc-800 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 font-medium text-zinc-200">
-          <Layers className="w-3.5 h-3.5 text-zinc-400" />
-          <span>{data.title || "BiRefNet AI"}</span>
-        </div>
-        {data.status ? <StatusBadge status={data.status as JobStatusType} /> : <Badge variant="secondary">Active</Badge>}
+    <BaseNodeCard
+      id={id}
+      data={data}
+      icon={<Layers className="w-3.5 h-3.5 text-zinc-400" />}
+      title={data.title || "BiRefNet AI"}
+      badgeLabel="Active"
+    >
+      <div className="flex justify-between items-center text-zinc-400">
+        <span>Model:</span>
+        <span className="font-mono text-zinc-200 bg-[var(--bg-body)] px-1.5 py-0.5 rounded border-0">
+          {data.modelName || "birefnet-general"}
+        </span>
       </div>
-      <div className="p-3 space-y-1.5 text-[11px]">
-        <div className="flex justify-between items-center text-zinc-400">
-          <span>Model:</span>
-          <span className="font-mono text-zinc-200">{data.modelName || "birefnet-general"}</span>
-        </div>
-      </div>
-      <Handle type="source" position={Position.Right} className="w-2.5 h-2.5 bg-zinc-500 border border-zinc-900 rounded-full" />
-    </div>
+    </BaseNodeCard>
   );
 }
 
 export function BannerNode({ id, data }: { id: string; data: any }) {
   return (
-    <div className={`group relative w-64 bg-zinc-900 border rounded-lg shadow-sm text-xs text-zinc-100 transition-all ${getNodeBorderClass(data.status, data.isBypassed)}`}>
-      <NodeToolbar
-        nodeId={id}
-        isBypassed={data.isBypassed}
-        onInspect={data.onInspect}
-        onTestStep={data.onTestStep}
-        onToggleBypass={data.onToggleBypass}
-        onDuplicate={data.onDuplicate}
-        onDelete={data.onDelete}
-      />
-      <Handle type="target" position={Position.Left} className="w-2.5 h-2.5 bg-zinc-500 border border-zinc-900 rounded-full" />
-      <div className="px-3 py-2 border-b border-zinc-800 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 font-medium text-zinc-200">
-          <LayoutTemplate className="w-3.5 h-3.5 text-zinc-400" />
-          <span>{data.title || "Banner Framing"}</span>
-        </div>
-        {data.status ? <StatusBadge status={data.status as JobStatusType} /> : <Badge variant="secondary">{data.width}x{data.height}</Badge>}
-      </div>
-      <div className="p-3 space-y-1 text-[11px] text-zinc-400">
+    <BaseNodeCard
+      id={id}
+      data={data}
+      icon={<LayoutTemplate className="w-3.5 h-3.5 text-zinc-400" />}
+      title={data.title || "Banner Framing"}
+      badgeLabel={`${data.width || 1280}x${data.height || 720}`}
+    >
+      <div className="space-y-1 text-zinc-400">
         <div className="flex justify-between">
           <span>Preset:</span>
           <span className="text-zinc-200 font-medium">{data.preset || "youtube_thumbnail"}</span>
@@ -141,124 +87,104 @@ export function BannerNode({ id, data }: { id: string; data: any }) {
           <span className="font-mono text-zinc-200">{data.bgColor || "#1e1e2e"}</span>
         </div>
       </div>
-      <Handle type="source" position={Position.Right} className="w-2.5 h-2.5 bg-zinc-500 border border-zinc-900 rounded-full" />
-    </div>
+    </BaseNodeCard>
   );
 }
 
 export function MultiAspectNode({ id, data }: { id: string; data: any }) {
   return (
-    <div className={`group relative w-64 bg-zinc-900 border rounded-lg shadow-sm text-xs text-zinc-100 transition-all ${getNodeBorderClass(data.status, data.isBypassed)}`}>
-      <NodeToolbar
-        nodeId={id}
-        isBypassed={data.isBypassed}
-        onInspect={data.onInspect}
-        onTestStep={data.onTestStep}
-        onToggleBypass={data.onToggleBypass}
-        onDuplicate={data.onDuplicate}
-        onDelete={data.onDelete}
-      />
-      <Handle type="target" position={Position.Left} className="w-2.5 h-2.5 bg-zinc-500 border border-zinc-900 rounded-full" />
-      <div className="px-3 py-2 border-b border-zinc-800 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 font-medium text-zinc-200">
-          <Split className="w-3.5 h-3.5 text-zinc-400" />
-          <span>{data.title || "Multi-Aspect Splitter"}</span>
-        </div>
-        {data.status ? <StatusBadge status={data.status as JobStatusType} /> : <Badge variant="secondary">3 Formats</Badge>}
+    <BaseNodeCard
+      id={id}
+      data={data}
+      icon={<Split className="w-3.5 h-3.5 text-zinc-400" />}
+      title={data.title || "Multi-Aspect Splitter"}
+      badgeLabel="3 Formats"
+    >
+      <div className="space-y-1 text-zinc-400 font-mono text-[10px]">
+        <p className="text-zinc-300">1. YouTube 16:9 (1280x720)</p>
+        <p className="text-zinc-300">2. Instagram 1:1 (1080x1080)</p>
+        <p className="text-zinc-300">3. TikTok/Story 9:16 (1080x1920)</p>
       </div>
-      <div className="p-3 space-y-1.5 text-[11px] text-zinc-400">
-        <p className="text-zinc-300 font-mono">1. YouTube 16:9 (1280x720)</p>
-        <p className="text-zinc-300 font-mono">2. Instagram 1:1 (1080x1080)</p>
-        <p className="text-zinc-300 font-mono">3. TikTok/Story 9:16 (1080x1920)</p>
-      </div>
-      <Handle type="source" position={Position.Right} className="w-2.5 h-2.5 bg-zinc-500 border border-zinc-900 rounded-full" />
-    </div>
+    </BaseNodeCard>
   );
 }
 
 export function WatermarkNode({ id, data }: { id: string; data: any }) {
   return (
-    <div className={`group relative w-64 bg-zinc-900 border rounded-lg shadow-sm text-xs text-zinc-100 transition-all ${getNodeBorderClass(data.status, data.isBypassed)}`}>
-      <NodeToolbar
-        nodeId={id}
-        isBypassed={data.isBypassed}
-        onInspect={data.onInspect}
-        onTestStep={data.onTestStep}
-        onToggleBypass={data.onToggleBypass}
-        onDuplicate={data.onDuplicate}
-        onDelete={data.onDelete}
-      />
-      <Handle type="target" position={Position.Left} className="w-2.5 h-2.5 bg-zinc-500 border border-zinc-900 rounded-full" />
-      <div className="px-3 py-2 border-b border-zinc-800 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 font-medium text-zinc-200">
-          <Stamp className="w-3.5 h-3.5 text-zinc-400" />
-          <span>{data.title || "Watermark Overlay"}</span>
-        </div>
-        {data.status ? <StatusBadge status={data.status as JobStatusType} /> : <Badge variant="secondary">Logo / Text</Badge>}
-      </div>
-      <div className="p-3 space-y-1 text-[11px] text-zinc-400">
+    <BaseNodeCard
+      id={id}
+      data={data}
+      icon={<Stamp className="w-3.5 h-3.5 text-zinc-400" />}
+      title={data.title || "Watermark Overlay"}
+      badgeLabel="Overlay"
+    >
+      <div className="space-y-1 text-zinc-400">
         <p className="truncate text-zinc-200 font-mono">Text: {data.text || "© Studio Flow AI"}</p>
         <p>Vị trí: {data.position || "bottom-right"}</p>
       </div>
-      <Handle type="source" position={Position.Right} className="w-2.5 h-2.5 bg-zinc-500 border border-zinc-900 rounded-full" />
-    </div>
+    </BaseNodeCard>
   );
 }
 
 export function TelegramNode({ id, data }: { id: string; data: any }) {
   return (
-    <div className={`group relative w-64 bg-zinc-900 border rounded-lg shadow-sm text-xs text-zinc-100 transition-all ${getNodeBorderClass(data.status, data.isBypassed)}`}>
-      <NodeToolbar
-        nodeId={id}
-        isBypassed={data.isBypassed}
-        onInspect={data.onInspect}
-        onTestStep={data.onTestStep}
-        onToggleBypass={data.onToggleBypass}
-        onDuplicate={data.onDuplicate}
-        onDelete={data.onDelete}
-      />
-      <Handle type="target" position={Position.Left} className="w-2.5 h-2.5 bg-zinc-500 border border-zinc-900 rounded-full" />
-      <div className="px-3 py-2 border-b border-zinc-800 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 font-medium text-zinc-200">
-          <Send className="w-3.5 h-3.5 text-zinc-400" />
-          <span>{data.title || "Telegram Notify"}</span>
-        </div>
-        {data.status ? <StatusBadge status={data.status as JobStatusType} /> : <Badge variant="secondary">Bot Webhook</Badge>}
-      </div>
-      <div className="p-3 space-y-1 text-[11px] text-zinc-400">
+    <BaseNodeCard
+      id={id}
+      data={data}
+      icon={<Send className="w-3.5 h-3.5 text-zinc-400" />}
+      title={data.title || "Telegram Notify"}
+      badgeLabel="Webhook"
+    >
+      <div className="space-y-1 text-zinc-400">
         <p className="text-zinc-300">Tự động bắn ảnh về Chat ID</p>
         <p className="truncate font-mono text-zinc-500">Chat: {data.chatId || "Chưa nhập ID"}</p>
       </div>
-      <Handle type="source" position={Position.Right} className="w-2.5 h-2.5 bg-zinc-500 border border-zinc-900 rounded-full" />
-    </div>
+    </BaseNodeCard>
   );
 }
 
 export function OutputNode({ id, data }: { id: string; data: any }) {
   return (
-    <div className={`group relative w-64 bg-zinc-900 border rounded-lg shadow-sm text-xs text-zinc-100 transition-all ${getNodeBorderClass(data.status, data.isBypassed)}`}>
-      <NodeToolbar
-        nodeId={id}
-        isBypassed={data.isBypassed}
-        onInspect={data.onInspect}
-        onTestStep={data.onTestStep}
-        onToggleBypass={data.onToggleBypass}
-        onDuplicate={data.onDuplicate}
-        onDelete={data.onDelete}
-      />
-      <Handle type="target" position={Position.Left} className="w-2.5 h-2.5 bg-zinc-500 border border-zinc-900 rounded-full" />
-      <div className="px-3 py-2 border-b border-zinc-800 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 font-medium text-zinc-200">
-          <ImageIcon className="w-3.5 h-3.5 text-zinc-400" />
-          <span>{data.title || "Banner Output"}</span>
-        </div>
-        {data.status ? <StatusBadge status={data.status as JobStatusType} /> : <Badge variant="secondary">PNG RGBA</Badge>}
-      </div>
-      <div className="p-3 space-y-1 text-[11px] text-zinc-400">
+    <BaseNodeCard
+      id={id}
+      data={data}
+      icon={<ImageIcon className="w-3.5 h-3.5 text-zinc-400" />}
+      title={data.title || "Banner Output"}
+      badgeLabel="PNG RGBA"
+      hasInput={true}
+      hasOutput={false}
+    >
+      <div className="space-y-1 text-zinc-400">
         <p className="text-zinc-300">✓ Lưu tự động storage/output/</p>
         <p>✓ Trả URL ảnh về cho Agent</p>
       </div>
-    </div>
+    </BaseNodeCard>
+  );
+}
+
+export function AgentBuilderNode({ id, data }: { id: string; data: any }) {
+  return (
+    <BaseNodeCard
+      id={id}
+      data={data}
+      icon={<Cpu className="w-3.5 h-3.5 text-zinc-400" />}
+      title={data.title || "Agent Code Builder"}
+      badgeLabel="CDP + AkiMCP"
+    >
+      <div className="space-y-1 text-zinc-400">
+        <div className="flex items-center justify-between">
+          <span className="text-zinc-500">Target Agent:</span>
+          <span className="text-zinc-200 font-mono">{data.targetAgent || "Gemini Web (AkiMCP)"}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-zinc-500">CDP Port:</span>
+          <span className="text-zinc-200 font-mono">9222 (Auto Pool)</span>
+        </div>
+        <p className="text-zinc-400 truncate font-mono text-[10px]">
+          {data.planPath ? `Plan: ${data.planPath.split('\\').pop()}` : "Chờ Orca dispatch plan..."}
+        </p>
+      </div>
+    </BaseNodeCard>
   );
 }
 
@@ -271,4 +197,5 @@ export const nodeTypes = {
   watermarkNode: WatermarkNode,
   telegramNode: TelegramNode,
   outputNode: OutputNode,
+  agentBuilderNode: AgentBuilderNode,
 };
