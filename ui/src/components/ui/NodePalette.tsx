@@ -102,7 +102,7 @@ export function NodePalette({
 
   return (
     <div className="relative w-full max-w-2xl bg-[#242424] rounded-lg shadow-2xl overflow-hidden p-6 space-y-5 text-zinc-100">
-      <div className="flex items-start justify-between pb-3 border-b border-zinc-800 pr-8">
+      <div className="flex items-start justify-between pb-3 pr-8">
         <div>
           <h3 className="font-semibold text-base text-zinc-100">Thư Viện Node (Node Palette)</h3>
           <p className="text-xs text-zinc-400 mt-0.5">Chọn loại Node muốn thêm vào sơ đồ Canvas</p>
@@ -132,6 +132,7 @@ export function NodePalette({
                     key={itemIdx}
                     role="button"
                     tabIndex={0}
+                    variant="solid"
                     onClick={() => {
                       data?.onAddNode(item.type, item.title, item.data);
                       onDismiss?.();
@@ -143,9 +144,9 @@ export function NodePalette({
                         onDismiss?.();
                       }
                     }}
-                    className="p-3 bg-[#1b1b1b] border border-zinc-800 rounded-lg hover:border-zinc-700 transition-colors cursor-pointer flex items-start gap-3 select-none"
+                    className="p-3 bg-[#18181a] hover:bg-[#1d1d20] transition-colors cursor-pointer flex items-start gap-3 select-none"
                   >
-                    <div className="p-2 bg-zinc-900 border border-zinc-800 rounded text-zinc-300 shrink-0">
+                    <div className="p-2 bg-[#1f1f22] rounded text-zinc-400 shrink-0">
                       <Icon className="w-4 h-4" />
                     </div>
                     <div className="flex-1 min-w-0">

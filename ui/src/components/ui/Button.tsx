@@ -5,12 +5,13 @@ import { useRipple } from "../../shared/hooks/use-ripple"
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "default" | "secondary" | "outline" | "ghost" | "destructive"
-  size?: "default" | "sm" | "lg" | "icon"
+  size?: "default" | "sm" | "lg" | "icon" | "icon-sm"
   disableRipple?: boolean
+  shimmer?: boolean
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "default", size = "default", disableRipple = false, onClick, children, ...props }, ref) => {
+  ({ className, variant = "default", size = "default", disableRipple = false, shimmer = false, onClick, children, ...props }, ref) => {
     const { createRipple, RippleContainer } = useRipple<HTMLButtonElement>()
 
     const variantStyles = {
@@ -26,6 +27,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       sm: "h-7 px-3 text-[11px]",
       lg: "h-10 px-6 text-sm",
       icon: "h-8 w-8 p-0",
+      "icon-sm": "h-6 w-6 p-0",
     }[size]
 
     const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -41,6 +43,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         onClick={handleClick}
         className={cn(
           "relative overflow-hidden inline-flex items-center justify-center gap-1.5 rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-400 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer",
+          shimmer && "shimmer-surface",
           variantStyles,
           sizeStyles,
           className

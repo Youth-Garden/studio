@@ -1,21 +1,52 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../../lib/utils";
+import { useRipple } from "../../shared/hooks/use-ripple";
 
 export const cardVariants = cva(
-  "rounded-lg border text-zinc-100 shadow-sm transition-all select-none",
+  "relative overflow-hidden rounded-lg text-zinc-100 transition-colors select-none",
   {
     variants: {
       variant: {
-        default: "border-zinc-800 bg-[#262626]",
-        subtle: "border-zinc-800 bg-[#1b1b1b]",
-        // State Active chuẩn chung toàn hệ thống theo tone Sky Cyan hiện đại
-        interactive: "border-zinc-800 bg-[#1b1b1b] cursor-pointer hover:border-zinc-700 hover:text-zinc-200",
-        active: "border-sky-500/70 bg-sky-500/[0.08] text-sky-200 ring-1 ring-sky-500/30 cursor-pointer shadow-sm",
+        default: "bg-[#262626]",
+        subtle: "bg-[#1b1b1b]",
+        solid: "bg-[#18181a] cursor-pointer hover:bg-[#1d1d20]",
+        interactive: "bg-[#1b1b1b] cursor-pointer hover:bg-[#1f1f22]",
+        active: "bg-[#2d2d32] text-zinc-100 cursor-pointer",
+      },
+      active: {
+        true: "cursor-pointer",
+        false: "",
       },
     },
+    compoundVariants: [
+      // Khi variant là "solid", active nâng sáng background vừa phải (#2b2b30), không shadow, không chói
+      {
+        variant: "solid",
+        active: true,
+        className: "bg-[#2b2b30]",
+      },
+      // Khi variant là "interactive"
+      {
+        variant: "interactive",
+        active: true,
+        className: "bg-[#28282c] cursor-pointer",
+      },
+      // Khi variant là "default" hoặc "subtle"
+      {
+        variant: "default",
+        active: true,
+        className: "bg-[#323236]",
+      },
+      {
+        variant: "subtle",
+        active: true,
+        className: "bg-[#26262a]",
+      },
+    ],
     defaultVariants: {
       variant: "default",
+      active: false,
     },
   }
 );
@@ -24,17 +55,38 @@ export interface CardProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof cardVariants> {
   isActive?: boolean;
+  disableRipple?: boolean;
 }
 
 export const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ className, variant, isActive, ...props }, ref) => {
-    const computedVariant = isActive ? "active" : variant;
+  ({ className, variant, active, isActive, disableRipple = false, onClick, children, ...props }, ref) => {
+    const isActuallyActive = Boolean(active ?? isActive);
+    const isClickable = variant === "solid" || variant === "interactive" || Boolean(onClick);
+    const { createRipple, RippleContainer } = useRipple<HTMLDivElement>();
+
+    const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!disableRipple && isClickable) {
+        createRipple(e);
+      }
+      onClick?.(e);
+    };
+
     return (
       <div
         ref={ref}
-        className={cn(cardVariants({ variant: computedVariant }), className)}
+        onClick={handleClick}
+        className={cn(
+          cardVariants({ 
+            variant: isActuallyActive && !variant ? "active" : variant,
+            active: isActuallyActive 
+          }), 
+          className
+        )}
         {...props}
-      />
+      >
+        {children}
+        <RippleContainer />
+      </div>
     );
   }
 );

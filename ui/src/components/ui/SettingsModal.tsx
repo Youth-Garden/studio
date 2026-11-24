@@ -4,7 +4,6 @@ import {
   Palette, 
   Sparkles, 
   Info,
-  Check,
   Grid
 } from 'lucide-react';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './Dialog';
@@ -12,14 +11,11 @@ import { Button } from './Button';
 import { Card } from './Card';
 import type { PortalProps } from '../../shared/types/portal.types';
 import type { Locale } from '../../lib/i18n';
+import { useSettingsStore, type AppTheme } from '../../shared/store/settings.store';
 
 export type CanvasPattern = 'dots' | 'lines' | 'cross' | 'none';
 
 export interface SettingsModalData {
-  locale: Locale;
-  onLocaleChange: (locale: Locale) => void;
-  canvasPattern?: CanvasPattern;
-  onCanvasPatternChange?: (pattern: CanvasPattern) => void;
   showCloseButton?: boolean;
 }
 
@@ -27,14 +23,23 @@ export function SettingsModal({
   onDismiss,
   data,
 }: PortalProps<SettingsModalData>) {
-  const currentLocale = data?.locale || 'vi';
-  const [selectedLocale, setSelectedLocale] = useState<Locale>(currentLocale);
-  const [activeTheme, setActiveTheme] = useState<'dark' | 'midnight' | 'amoled'>('dark');
-  const [selectedPattern, setSelectedPattern] = useState<CanvasPattern>(data?.canvasPattern || 'dots');
+  const { 
+    locale, 
+    theme, 
+    canvasPattern, 
+    setLocale, 
+    setTheme, 
+    setCanvasPattern 
+  } = useSettingsStore();
+
+  const [selectedLocale, setSelectedLocale] = useState<Locale>(locale);
+  const [activeTheme, setActiveTheme] = useState<AppTheme>(theme);
+  const [selectedPattern, setSelectedPattern] = useState<CanvasPattern>(canvasPattern);
 
   const handleSave = () => {
-    data?.onLocaleChange(selectedLocale);
-    data?.onCanvasPatternChange?.(selectedPattern);
+    setLocale(selectedLocale);
+    setTheme(activeTheme);
+    setCanvasPattern(selectedPattern);
     onDismiss?.();
   };
 
@@ -70,8 +75,8 @@ export function SettingsModal({
                   key={item.code}
                   role="button"
                   tabIndex={0}
-                  isActive={isSelected}
-                  variant={isSelected ? undefined : "interactive"}
+                  variant="solid"
+                  active={isSelected}
                   onClick={() => setSelectedLocale(item.code)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -82,12 +87,11 @@ export function SettingsModal({
                   className="flex items-center justify-between p-2.5 text-xs"
                 >
                   <span className="flex items-center gap-1.5">
-                    <span className={`font-mono text-[10px] ${isSelected ? 'text-sky-400 font-semibold' : 'text-zinc-500'}`}>
+                    <span className="font-mono text-[10px] text-zinc-400">
                       {item.code.toUpperCase()}
                     </span>
-                    <span className={isSelected ? 'text-sky-200 font-medium' : ''}>{item.label}</span>
+                    <span className="text-zinc-200 font-medium">{item.label}</span>
                   </span>
-                  {isSelected && <Check className="w-3.5 h-3.5 text-sky-400 shrink-0" />}
                 </Card>
               );
             })}
@@ -153,8 +157,8 @@ export function SettingsModal({
                   key={p.id}
                   role="button"
                   tabIndex={0}
-                  isActive={isSelected}
-                  variant={isSelected ? undefined : "interactive"}
+                  variant="solid"
+                  active={isSelected}
                   onClick={() => setSelectedPattern(p.id)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -168,10 +172,9 @@ export function SettingsModal({
                   {p.preview}
 
                   <div className="flex items-center justify-between pt-0.5">
-                    <span className={`text-[11px] font-medium truncate ${isSelected ? 'text-sky-200 font-semibold' : 'text-zinc-400'}`}>
+                    <span className="text-[11px] font-medium truncate text-zinc-300">
                       {p.label}
                     </span>
-                    {isSelected && <Check className="w-3 h-3 text-sky-400 shrink-0" />}
                   </div>
                 </Card>
               );
@@ -183,40 +186,44 @@ export function SettingsModal({
         <div className="space-y-2 pt-2 border-t border-zinc-800/80">
           <label className="text-[11px] font-medium text-zinc-400 flex items-center gap-1.5">
             <Palette className="w-3.5 h-3.5 text-zinc-400" />
-            <span>Chủ đề Giao diện</span>
+            <span>Chủ đề Giao diện (Theme)</span>
           </label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             {[
               { id: 'dark', label: 'Tối Trung Tính', bg: '#1e1e1e' },
               { id: 'midnight', label: 'Xám Đêm', bg: '#18181b' },
-              { id: 'amoled', label: 'Đen Tuyệt Đối', bg: '#09090b' },
-            ].map((theme) => {
-              const isSelected = activeTheme === theme.id;
+              { id: 'amoled', label: 'Đen Tuyệt Đối', bg: '#050505' },
+              { id: 'light', label: 'Sáng Tinh Tế', bg: '#f4f4f5' },
+            ].map((themeItem) => {
+              const isSelected = activeTheme === themeItem.id;
               return (
                 <Card
-                  key={theme.id}
+                  key={themeItem.id}
                   role="button"
                   tabIndex={0}
-                  isActive={isSelected}
-                  variant={isSelected ? undefined : "interactive"}
-                  onClick={() => setActiveTheme(theme.id as any)}
+                  variant="solid"
+                  active={isSelected}
+                  onClick={() => {
+                    setActiveTheme(themeItem.id as any);
+                    setTheme(themeItem.id as any); // Áp dụng ngay tức thì để người dùng thấy thay đổi
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
-                      setActiveTheme(theme.id as any);
+                      setActiveTheme(themeItem.id as any);
+                      setTheme(themeItem.id as any);
                     }
                   }}
                   className="flex flex-col gap-1.5 p-2 text-left"
                 >
                   <div className="flex items-center justify-between">
                     <span
-                      className={`w-3.5 h-3.5 rounded-full border ${isSelected ? 'border-sky-400 ring-2 ring-sky-500/30' : 'border-zinc-700'}`}
-                      style={{ backgroundColor: theme.bg }}
+                      className="w-3.5 h-3.5 rounded-full border border-zinc-700 shadow-xs"
+                      style={{ backgroundColor: themeItem.bg }}
                     />
-                    {isSelected && <Check className="w-3 h-3 text-sky-400 shrink-0" />}
                   </div>
-                  <span className={`text-[11px] font-medium ${isSelected ? 'text-sky-200 font-semibold' : 'text-zinc-400'}`}>
-                    {theme.label}
+                  <span className="text-[11px] font-medium text-zinc-300 truncate">
+                    {themeItem.label}
                   </span>
                 </Card>
               );

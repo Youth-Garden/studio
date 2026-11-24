@@ -77,8 +77,8 @@ export function StatusBadge({ status, showIcon = true, label, className, ...prop
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5 text-[10px] font-mono tracking-tight font-medium transition-colors",
-        config.classes,
+        "inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[10px] font-mono tracking-tight font-medium transition-colors",
+        config.classes.replace(/border[^\s]*/g, ''),
         className
       )}
       {...props}

@@ -3,9 +3,11 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import { Card } from '../components/ui/Card';
+import { Tooltip, TooltipTrigger, TooltipContent } from '../components/ui/Tooltip';
 import { Icons } from '../shared/icons';
 import { translations, type Locale } from '../lib/i18n';
 import { API_ENDPOINTS } from '../lib/constants';
+import { useSettingsStore } from '../shared/store/settings.store';
 import type { WorkflowItem } from '../components/ui/FlowHubModal';
 
 interface DashboardViewProps {
@@ -23,6 +25,7 @@ export function DashboardView({
   onOpenSettings,
   onImportWorkflow,
 }: DashboardViewProps) {
+  const { theme, toggleTheme } = useSettingsStore();
   const [workflows, setWorkflows] = useState<WorkflowItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreating, setIsCreating] = useState(false);
@@ -118,11 +121,11 @@ export function DashboardView({
 
   return (
     <div className="min-h-screen bg-[#18181b] text-zinc-100 flex flex-col font-sans select-none">
-      {/* Top Header */}
-      <header className="h-14 border-b border-zinc-800/80 bg-[#1e1e1e] px-6 flex items-center justify-between">
+      {/* Top Header - Bỏ border dưới, chuyển sang nền phẳng tinh tế */}
+      <header className="h-14 bg-[#1e1e1e] px-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {/* Logo Studio Flow Hub độc quyền tự động generate */}
-          <div className="w-8 h-8 rounded-lg bg-[#222224] border border-zinc-700/60 flex items-center justify-center shadow-inner">
+          {/* Logo Studio Flow Hub độc quyền tự động generate - bỏ border */}
+          <div className="w-8 h-8 rounded-lg bg-[#262628] flex items-center justify-center">
             <Icons name="logo" size={18} />
           </div>
           <div>
@@ -132,17 +135,41 @@ export function DashboardView({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Nút Toggle Theme Sáng / Tối trực tiếp trên Dashboard */}
+          <Tooltip>
+            <TooltipTrigger>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={toggleTheme}
+                className="text-xs gap-1.5"
+              >
+                <Icons name={theme === 'light' ? "moon" : "sun"} size={14} className="text-zinc-400" />
+                <span>{theme === 'light' ? "Giao diện Tối" : "Giao diện Sáng"}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {theme === 'light' ? "Chuyển sang giao diện Tối" : "Chuyển sang giao diện Sáng"}
+            </TooltipContent>
+          </Tooltip>
+
           {/* Nút Cài đặt - đồng bộ variant secondary với Import JSON */}
-          <Button 
-            variant="secondary" 
-            size="sm" 
-            onClick={onOpenSettings}
-            className="text-xs gap-1.5"
-            title={t.settings}
-          >
-            <Icons name="settings" size={14} className="text-zinc-400" />
-            <span>{t.settings}</span>
-          </Button>
+          <Tooltip>
+            <TooltipTrigger>
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                onClick={onOpenSettings}
+                className="text-xs gap-1.5"
+              >
+                <Icons name="settings" size={14} className="text-zinc-400" />
+                <span>{t.settings}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              Tùy chỉnh ngôn ngữ, lưới nền và chủ đề giao diện
+            </TooltipContent>
+          </Tooltip>
 
           {/* Import JSON */}
           <label className="cursor-pointer">
@@ -168,10 +195,10 @@ export function DashboardView({
 
       {/* Main Content Dashboard */}
       <main className="flex-1 max-w-6xl w-full mx-auto p-6 space-y-6">
-        {/* Banner Tổng Quan Metric - Theme Meta Neutral thuần túy, không dùng màu mè */}
+        {/* Banner Tổng Quan Metric - Bỏ viền quanh card & icon container */}
         <div className="grid grid-cols-3 gap-4">
-          <Card className="p-4 bg-[#202022] border-zinc-800 flex items-center gap-4">
-            <div className="p-2.5 rounded-lg bg-[#28282a] border border-zinc-700/60 text-zinc-300">
+          <Card className="p-4 bg-[#202022] flex items-center gap-4">
+            <div className="p-2.5 rounded-lg bg-[#28282a] text-zinc-300">
               <Icons name="check-circle-2" size={16} className="text-zinc-300" />
             </div>
             <div>
@@ -180,8 +207,8 @@ export function DashboardView({
             </div>
           </Card>
 
-          <Card className="p-4 bg-[#202022] border-zinc-800 flex items-center gap-4">
-            <div className="p-2.5 rounded-lg bg-[#28282a] border border-zinc-700/60 text-zinc-300">
+          <Card className="p-4 bg-[#202022] flex items-center gap-4">
+            <div className="p-2.5 rounded-lg bg-[#28282a] text-zinc-300">
               <Icons name="bot" size={16} className="text-zinc-300" />
             </div>
             <div>
@@ -193,8 +220,8 @@ export function DashboardView({
             </div>
           </Card>
 
-          <Card className="p-4 bg-[#202022] border-zinc-800 flex items-center gap-4">
-            <div className="p-2.5 rounded-lg bg-[#28282a] border border-zinc-700/60 text-zinc-300">
+          <Card className="p-4 bg-[#202022] flex items-center gap-4">
+            <div className="p-2.5 rounded-lg bg-[#28282a] text-zinc-300">
               <Icons name="sparkles" size={16} className="text-zinc-300" />
             </div>
             <div>
@@ -243,7 +270,7 @@ export function DashboardView({
           </div>
         </div>
 
-        {/* Danh sách Workflows Card Grid */}
+        {/* Danh sách Workflows Card Grid - Phẳng, không viền border quanh card, dùng nền phân tách hiện đại */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredWorkflows.map((flow) => {
             const isCurrent = flow.id === currentWorkflowId;
@@ -253,18 +280,18 @@ export function DashboardView({
                 onClick={() => onOpenWorkflow(flow.id)}
                 isActive={isCurrent}
                 variant={isCurrent ? undefined : "interactive"}
-                className={`p-5 flex flex-col justify-between hover:shadow-xl ${
-                  isCurrent ? 'bg-[#18222c]' : 'bg-[#202022]'
+                className={`p-5 flex flex-col justify-between hover:shadow-lg transition-all ${
+                  isCurrent ? 'bg-[#202022]' : 'bg-[#202022]'
                 }`}
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-sm text-zinc-100 flex items-center gap-2 truncate">
-                      <Icons name="workflow" size={16} className={`shrink-0 ${isCurrent ? 'text-sky-400' : 'text-zinc-400'}`} />
+                      <Icons name="workflow" size={16} className="shrink-0 text-zinc-400" />
                       {flow.name}
                     </span>
                     {isCurrent && (
-                      <Badge variant="outline" className="text-[9px] bg-sky-500/10 text-sky-400 border-sky-500/30">
+                      <Badge variant="secondary" className="text-[10px] bg-zinc-800 text-zinc-300 font-medium px-2 py-0.5">
                         {t.lastOpened}
                       </Badge>
                     )}
@@ -274,7 +301,7 @@ export function DashboardView({
                   </p>
                 </div>
 
-                <div className="pt-4 mt-4 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-400">
+                <div className="pt-4 mt-4 border-t border-zinc-800/40 flex items-center justify-between text-[11px] text-zinc-400">
                   <div className="flex items-center gap-2">
                     <span className="flex items-center gap-1 text-zinc-400">
                       <Icons name="layers" size={12} className="text-zinc-500" />

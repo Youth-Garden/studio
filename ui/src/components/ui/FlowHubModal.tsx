@@ -210,15 +210,15 @@ export function FlowHubModal({
           return (
             <Card
               key={flow.id}
+              role="button"
+              tabIndex={0}
+              variant="solid"
+              active={isCurrent}
               onClick={() => {
                 data?.onSelectWorkflow(flow.id);
                 onDismiss?.();
               }}
-              className={`p-4 transition-all cursor-pointer flex flex-col justify-between ${
-                isCurrent 
-                  ? 'border-emerald-500/70 bg-zinc-800/90 ring-1 ring-emerald-500/30' 
-                  : 'bg-[#1b1b1b] border-zinc-800 hover:border-zinc-700'
-              }`}
+              className="p-4 transition-all cursor-pointer flex flex-col justify-between"
             >
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
@@ -227,7 +227,7 @@ export function FlowHubModal({
                     {flow.name}
                   </span>
                   {isCurrent && (
-                    <Badge variant="success" className="text-[9px]">
+                    <Badge variant="secondary" className="text-[9px] bg-zinc-800 text-zinc-300 font-medium">
                       Active
                     </Badge>
                   )}
@@ -237,7 +237,7 @@ export function FlowHubModal({
                 </p>
               </div>
 
-              <div className="pt-3 border-t border-zinc-800/80 flex items-center justify-between text-[10px] text-zinc-500">
+              <div className="pt-3 border-t border-zinc-800/40 flex items-center justify-between text-[10px] text-zinc-500">
                 <div className="flex items-center gap-2">
                   <span>{flow.nodesCount} Nodes</span>
                   <span>•</span>

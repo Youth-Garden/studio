@@ -4,6 +4,11 @@ export interface LogoIconProps extends SVGProps<SVGSVGElement> {
   size?: number | string;
 }
 
+/**
+ * Biểu tượng độc quyền thống nhất của Studio Flow:
+ * Tổ hợp hình học Geometric Topology biểu thị mô hình Node Graph phân tầng:
+ * 4 Node (Trigger -> Processing -> Matting -> Output) liên kết qua các dòng chảy dữ liệu.
+ */
 export function StudioLogoIcon({ className, size = 18, ...props }: LogoIconProps) {
   return (
     <svg
@@ -15,21 +20,57 @@ export function StudioLogoIcon({ className, size = 18, ...props }: LogoIconProps
       className={className}
       {...props}
     >
-      <circle cx="5" cy="5" r="2.5" className="fill-emerald-400" />
-      <circle cx="19" cy="5" r="2.5" className="fill-zinc-400" />
-      <circle cx="19" cy="19" r="2.5" className="fill-emerald-400" />
-      <circle cx="5" cy="19" r="2.5" className="fill-zinc-400" />
+      {/* Khối nền hình thoi trung tâm */}
+      <rect
+        x="9.5"
+        y="2"
+        width="5"
+        height="5"
+        rx="1.25"
+        transform="rotate(45 9.5 2)"
+        className="fill-zinc-200"
+      />
+      
+      {/* Node trái & Node phải */}
+      <rect
+        x="2"
+        y="9.5"
+        width="5"
+        height="5"
+        rx="1.25"
+        className="fill-zinc-400"
+      />
+      <rect
+        x="17"
+        y="9.5"
+        width="5"
+        height="5"
+        rx="1.25"
+        className="fill-zinc-400"
+      />
 
-      {/* Dây nối DAG Topological */}
+      {/* Node chân đế Output */}
+      <rect
+        x="9.5"
+        y="17"
+        width="5"
+        height="5"
+        rx="1.25"
+        className="fill-zinc-300"
+      />
+
+      {/* Đường nối DAG Flow liên kết */}
       <path
-        d="M5 7.5V16.5M7.5 5H16.5M7 7L17 17M16.5 19H7.5"
+        d="M6 12L10.5 5.5M18 12L13.5 5.5M6 14L10.5 18M18 14L13.5 18"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
-        strokeDasharray="2 2"
+        strokeLinejoin="round"
         className="text-zinc-600"
       />
-      <circle cx="12" cy="12" r="1.5" className="fill-emerald-400" />
+
+      {/* Node hạt nhân xử lý AI trung tâm */}
+      <circle cx="12" cy="12" r="1.75" className="fill-zinc-100" />
     </svg>
   );
 }

@@ -8,6 +8,7 @@ __pycache__/
 
 # Chrome profile data (sensitive/session cookies)
 chrome_profile/
+gemini_isolated_profile/
 
 # Build artifacts
 dist/

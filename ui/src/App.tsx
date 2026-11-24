@@ -22,8 +22,6 @@ import {
   Sliders, 
   Download, 
   CheckCircle2, 
-  ChevronRight, 
-  ChevronLeft,
   History,
   AlertCircle,
   Copy,
@@ -33,17 +31,23 @@ import {
   Settings
 } from 'lucide-react';
 
+import { Icons } from './shared/icons';
+
 import { nodeTypes } from './CustomNodes';
 import { Button } from './components/ui/Button';
-import { Input } from './components/ui/Input';
+import { Input, FormField } from './components/ui/Input';
+import { Select } from './components/ui/Select';
 import { Textarea } from './components/ui/Textarea';
 import { Badge } from './components/ui/Badge';
 import { StatusBadge } from './components/ui/StatusBadge';
 import { Card, CardHeader, CardTitle, CardContent } from './components/ui/Card';
+import { Tabs, TabsList, TabsTrigger } from './components/ui/Tabs';
+import { Tooltip, TooltipTrigger, TooltipContent } from './components/ui/Tooltip';
+import { CodeBlock, CodeBlockHeader, CodeBlockTitle, CodeBlockCopyButton, CodeBlockContent } from './components/ui/CodeBlock';
 import { Sheet } from './components/ui/Sheet';
 import { Toaster, toast } from './components/ui/Toast';
 import { NodePalette, type NodePaletteData } from './components/ui/NodePalette';
-import { SettingsModal, type SettingsModalData, type CanvasPattern } from './components/ui/SettingsModal';
+import { SettingsModal, type SettingsModalData } from './components/ui/SettingsModal';
 import { StudioLogo } from './components/ui/StudioLogo';
 import { PortalRenderer } from './shared/components/portal/portal-renderer';
 import { usePortal } from './shared/hooks/use-portal';
@@ -51,20 +55,28 @@ import { NotificationModal, type ModalData } from './components/ui/NotificationM
 import { TransitionEffect } from './shared/components/TransitionEffect';
 import { translations, type Locale } from './lib/i18n';
 import { DashboardView } from './views/DashboardView';
+import { useSettingsStore } from './shared/store/settings.store';
 
 export default function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [selectedNode, setSelectedNode] = useState<any>(null);
 
-  // i18n Language support
-  const [locale, setLocale] = useState<Locale>('vi');
-  const [canvasPattern, setCanvasPattern] = useState<CanvasPattern>('dots');
-  const t = translations[locale];
+  // Global Persistent Settings Store (Zustand + LocalStorage)
+  const { 
+    locale, 
+    theme,
+    toggleTheme,
+    canvasPattern, 
+    sidebarWidth, 
+    isSidebarOpen, 
+    setSidebarWidth, 
+    toggleSidebar, 
+    setSidebarOpen 
+  } = useSettingsStore();
+  const t = translations[locale as Locale] || translations.vi;
 
   // Sidebar controls
-  const [sidebarWidth, setSidebarWidth] = useState(380);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [sidebarTab, setSidebarTab] = useState<'config' | 'history'>('config');
   const isResizingRef = useRef(false);
 
@@ -302,7 +314,7 @@ export default function App() {
   const handleExecuteFlow = async () => {
     setIsExecuting(true);
     setSidebarTab('history');
-    setIsSidebarOpen(true);
+    setSidebarOpen(true);
 
     const triggerNode = nodes.find((n) => n.id === 'node-trigger') || nodes[0];
     const bannerNode = nodes.find((n) => n.id === 'node-banner');
@@ -400,8 +412,6 @@ export default function App() {
           onOpenWorkflow={(id) => navigateToEditor(id)}
           onOpenSettings={() => {
             presentSettings({
-              locale,
-              onLocaleChange: (newLoc) => setLocale(newLoc),
               showCloseButton: true,
             });
           }}
@@ -409,10 +419,10 @@ export default function App() {
         />
       ) : (
         <div className="flex flex-col h-screen w-full bg-[#1b1b1b] text-zinc-200 overflow-hidden font-sans">
-          {/* THANH TOP NAVBAR TOÀN PHẦN (CỐ ĐỊNH FULL CHIỀU NGANG, KHÔNG BỊ SIDEBAR ĐẨY) */}
-          <header className="h-12 bg-[#1b1b1b] border-b border-zinc-800/80 px-4 flex items-center justify-between z-30 shrink-0">
+          {/* THANH TOP NAVBAR TOÀN PHẦN (CỐ ĐỊNH FULL CHIỀU NGANG, BỎ BORDER DƯỚI) */}
+          <header className="h-12 bg-[#1e1e1e] px-4 flex items-center justify-between z-30 shrink-0">
             <div className="flex items-center gap-2.5">
-              <StudioLogo size={16} />
+              <StudioLogo size={18} />
               <h1 className="font-semibold text-xs tracking-wide uppercase text-zinc-100">
                 {t.title}
               </h1>
@@ -446,18 +456,36 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={copyWebhookCurl} title={t.copyWebhook}>
-                <Copy className="w-3.5 h-3.5" />
-                {t.copyWebhook}
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleSaveWorkflow}>
-                <Save className="w-3.5 h-3.5" />
-                {t.saveFlow}
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleExportWorkflow} title="Xuất file JSON của luồng hiện tại">
-                <Download className="w-3.5 h-3.5" />
-                Xuất JSON
-              </Button>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Button variant="outline" size="sm" onClick={copyWebhookCurl}>
+                    <Copy className="w-3.5 h-3.5" />
+                    {t.copyWebhook}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Sao chép cURL trigger Webhook</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger>
+                  <Button variant="outline" size="sm" onClick={handleSaveWorkflow}>
+                    <Save className="w-3.5 h-3.5" />
+                    {t.saveFlow}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Lưu luồng hiện tại</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger>
+                  <Button variant="outline" size="sm" onClick={handleExportWorkflow}>
+                    <Download className="w-3.5 h-3.5" />
+                    Xuất JSON
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Xuất file JSON của sơ đồ luồng</TooltipContent>
+              </Tooltip>
+
               <Button variant="default" size="sm" onClick={handleExecuteFlow} disabled={isExecuting}>
                 {isExecuting ? (
                   <>
@@ -472,22 +500,47 @@ export default function App() {
                 )}
               </Button>
 
-              <div className="h-4 w-px bg-zinc-800 mx-1" />
+              {/* Nút Toggle Theme Sáng / Tối */}
+              <Tooltip>
+                <TooltipTrigger>
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    onClick={toggleTheme}
+                    className="text-zinc-300 hover:text-zinc-100 hover:border-zinc-600 transition-all"
+                  >
+                    <Icons name={theme === 'light' ? "moon" : "sun"} size={13} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  {theme === 'light' ? "Chuyển sang giao diện Tối" : "Chuyển sang giao diện Sáng"}
+                </TooltipContent>
+              </Tooltip>
 
-              {/* Nút Đóng / Mở Sidebar tối giản dạng mũi tên icon-only kèm title/tooltip */}
-              <Button 
-                variant="outline"
-                size="icon" 
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                title={isSidebarOpen ? "Đóng bảng cấu hình" : "Mở bảng cấu hình"}
-                className="h-8 w-8 text-zinc-300 hover:text-zinc-100 border-zinc-700/80"
-              >
-                {isSidebarOpen ? (
-                  <ChevronRight className="w-4 h-4 text-zinc-300" />
-                ) : (
-                  <ChevronLeft className="w-4 h-4 text-zinc-300" />
-                )}
-              </Button>
+              {/* Divider rõ nét hơn */}
+              <div className="h-4 w-px bg-zinc-700/80 mx-1.5" />
+
+              {/* Nút Đóng / Mở Sidebar tối giản dạng mũi tên icon-only kèm tooltip & shimmer */}
+              <Tooltip>
+                <TooltipTrigger>
+                  <Button 
+                    variant="outline"
+                    size="icon-sm" 
+                    shimmer
+                    onClick={toggleSidebar}
+                    className="text-zinc-300 hover:text-zinc-100 hover:border-zinc-600 transition-all duration-150"
+                  >
+                    <Icons 
+                      name={isSidebarOpen ? "chevron-right" : "chevron-left"} 
+                      size={12} 
+                      className="text-zinc-300 transition-transform" 
+                    />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  {isSidebarOpen ? "Đóng bảng cấu hình" : "Mở bảng cấu hình"}
+                </TooltipContent>
+              </Tooltip>
             </div>
           </header>
 
@@ -519,7 +572,7 @@ export default function App() {
                   onNodeClick={(_, node) => {
                     setSelectedNode(node);
                     setSidebarTab('config');
-                    setIsSidebarOpen(true);
+                    setSidebarOpen(true);
                   }}
                   fitView
                   className="bg-[#1b1b1b]"
@@ -542,10 +595,6 @@ export default function App() {
                     <ControlButton
                       onClick={() => {
                         presentSettings({
-                          locale,
-                          onLocaleChange: (newLoc) => setLocale(newLoc),
-                          canvasPattern,
-                          onCanvasPatternChange: (newPattern) => setCanvasPattern(newPattern),
                           showCloseButton: true,
                         });
                       }}
@@ -575,11 +624,11 @@ export default function App() {
               </div>
             )}
 
-            {/* CỘT PHẢI: BẢNG CẤU HÌNH NODE & LỊCH SỬ CHẠY OUTPUT (NẰM DƯỚI HEADER) */}
+            {/* CỘT PHẢI: BẢNG CẤU HÌNH NODE & LỊCH SỬ CHẠY OUTPUT (BỎ BORDER TRÁI) */}
             <div 
               style={{ width: isSidebarOpen ? `${sidebarWidth}px` : '0px' }}
-              className={`h-full bg-[#1b1b1b] border-l border-zinc-800/80 flex flex-col z-20 shrink-0 transition-[width] duration-300 ease-in-out ${
-                isSidebarOpen ? 'overflow-hidden' : 'overflow-hidden border-l-0 pointer-events-none'
+              className={`h-full bg-[#1b1b1b] flex flex-col z-20 shrink-0 transition-[width] duration-300 ease-in-out ${
+                isSidebarOpen ? 'overflow-hidden' : 'overflow-hidden pointer-events-none'
               }`}
             >
               <TransitionEffect
@@ -593,27 +642,19 @@ export default function App() {
                 style={{ width: `${sidebarWidth}px` }}
               >
                 {/* Header Tab của Sidebar (Nằm bên dưới Header chính) */}
-                <div className="h-11 border-b border-zinc-800/80 px-3 flex items-center justify-between shrink-0 bg-[#212121]">
-                  <div className="flex items-center gap-1 bg-[#18181a] p-0.5 rounded-md border border-zinc-800 text-xs w-full">
-                    <button
-                      onClick={() => setSidebarTab('config')}
-                      className={`flex-1 py-1 px-2.5 rounded text-xs transition-all duration-150 flex items-center justify-center gap-1.5 ${
-                        sidebarTab === 'config' ? 'bg-zinc-800 text-zinc-100 font-medium shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
-                      }`}
-                    >
-                      <Sliders className="w-3.5 h-3.5" />
-                      <span>{t.sidebarConfig}</span>
-                    </button>
-                    <button
-                      onClick={() => setSidebarTab('history')}
-                      className={`flex-1 py-1 px-2.5 rounded text-xs transition-all duration-150 flex items-center justify-center gap-1.5 ${
-                        sidebarTab === 'history' ? 'bg-zinc-800 text-zinc-100 font-medium shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
-                      }`}
-                    >
-                      <History className="w-3.5 h-3.5" />
-                      <span>{t.sidebarHistory} ({historyJobs.length})</span>
-                    </button>
-                  </div>
+                <div className="h-11 px-3 flex items-center justify-between shrink-0 bg-[#212121]">
+                  <Tabs value={sidebarTab} onValueChange={(v) => setSidebarTab(v as any)} className="w-full">
+                    <TabsList className="w-full">
+                      <TabsTrigger value="config" className="flex-1 gap-1.5 py-1">
+                        <Sliders className="w-3.5 h-3.5" />
+                        <span>{t.sidebarConfig}</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="history" className="flex-1 gap-1.5 py-1">
+                        <History className="w-3.5 h-3.5" />
+                        <span>{t.sidebarHistory} ({historyJobs.length})</span>
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
                 </div>
 
                 {/* Nội dung Sidebar (Cuộn dọc độc lập, cố định gutter để không bị nhảy layout) */}
@@ -649,24 +690,22 @@ export default function App() {
                   {/* Node Banner Form */}
                   {selectedNode.id === 'node-banner' && (
                     <div className="space-y-3">
-                      <div className="space-y-1">
-                        <label className="text-[11px] text-zinc-400 font-medium">Preset Kích thước:</label>
-                        <select
+                      <FormField label="Preset Kích thước:">
+                        <Select
                           value={selectedNode.data.preset || 'youtube_thumbnail'}
-                          onChange={(e) => {
-                            const val = e.target.value;
+                          onValueChange={(val) => {
                             if (val === 'youtube_thumbnail') { updateNodeData('width', 1280); updateNodeData('height', 720); }
                             else if (val === 'fhd_banner') { updateNodeData('width', 1920); updateNodeData('height', 1080); }
                             else if (val === 'square_post') { updateNodeData('width', 1080); updateNodeData('height', 1080); }
                             updateNodeData('preset', val);
                           }}
-                          className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none"
-                        >
-                          <option value="youtube_thumbnail">YouTube Thumbnail (1280x720)</option>
-                          <option value="fhd_banner">Full HD (1920x1080)</option>
-                          <option value="square_post">Square (1080x1080)</option>
-                        </select>
-                      </div>
+                          options={[
+                            { value: 'youtube_thumbnail', label: 'YouTube Thumbnail (1280x720)' },
+                            { value: 'fhd_banner', label: 'Full HD (1920x1080)' },
+                            { value: 'square_post', label: 'Square (1080x1080)' },
+                          ]}
+                        />
+                      </FormField>
 
                       <div className="space-y-1">
                         <label className="text-[11px] text-zinc-400 font-medium">Màu nền Banner:</label>
@@ -690,38 +729,56 @@ export default function App() {
                   {/* Node Gemini Form */}
                   {selectedNode.type === 'geminiNode' && (
                     <div className="space-y-2">
-                      <label className="text-[11px] text-zinc-400 font-medium">Cổng Chrome Remote Debugging (CDP):</label>
-                      <Input
-                        type="number"
-                        value={selectedNode.data.port || 9222}
-                        onChange={(e) => updateNodeData('port', parseInt(e.target.value) || 9222)}
-                        className="font-mono text-xs"
-                      />
-                      <p className="text-[10px] text-zinc-500">Mặc định: 9222 (Chrome attach session)</p>
+                      <FormField 
+                        label="Cổng Chrome Remote Debugging (CDP):"
+                        description="Mặc định: 9222 (Chrome attach session)"
+                      >
+                        <Input
+                          type="number"
+                          value={selectedNode.data.port || 9222}
+                          onChange={(e) => updateNodeData('port', parseInt(e.target.value) || 9222)}
+                          className="font-mono text-xs"
+                        />
+                      </FormField>
                     </div>
                   )}
 
                   {/* Node BiRefNet Form */}
                   {(selectedNode.id === 'node-birefnet' || selectedNode.type === 'birefnetNode') && (
                     <div className="space-y-2">
-                      <label className="text-[11px] text-zinc-400 font-medium">Model AI Tách nền:</label>
-                      <select
-                        value={selectedNode.data.modelName || 'birefnet-general'}
-                        onChange={(e) => updateNodeData('modelName', e.target.value)}
-                        className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none"
-                      >
-                        <option value="birefnet-general">BiRefNet (SOTA 2024 - Khuyên dùng)</option>
-                        <option value="isnet-general-use">IS-Net DIS</option>
-                      </select>
+                      <FormField label="Model AI Tách nền:">
+                        <Select
+                          value={selectedNode.data.modelName || 'birefnet-general'}
+                          onValueChange={(val) => updateNodeData('modelName', val)}
+                          options={[
+                            { 
+                              value: 'birefnet-general', 
+                              label: 'BiRefNet (SOTA 2024 - Khuyên dùng)',
+                              description: 'Độ chính xác cao nhất, tách tóc và biên mờ mịn màng'
+                            },
+                            { 
+                              value: 'isnet-general-use', 
+                              label: 'IS-Net DIS',
+                              description: 'Model nhẹ, tốc độ suy luận nhanh'
+                            },
+                          ]}
+                        />
+                      </FormField>
                     </div>
                   )}
 
-                  {/* Thông số JSON Runtime Inspector ngay trên Sidebar */}
+                  {/* Thông số JSON Runtime Inspector ngay trên Sidebar dùng chuẩn CodeBlock */}
                   <div className="pt-2 border-t border-zinc-800/80 space-y-1.5">
                     <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Thông số Runtime JSON:</label>
-                    <pre className="p-2.5 bg-zinc-950 border border-zinc-800/80 rounded text-[10px] font-mono text-zinc-400 overflow-x-auto max-h-40">
-                      {JSON.stringify(selectedNode.data, null, 2)}
-                    </pre>
+                    <CodeBlock size="sm" className="max-h-48">
+                      <CodeBlockHeader className="py-1 px-2.5">
+                        <CodeBlockTitle>data.json</CodeBlockTitle>
+                        <CodeBlockCopyButton value={JSON.stringify(selectedNode.data, null, 2)} />
+                      </CodeBlockHeader>
+                      <CodeBlockContent className="p-2.5 text-[10px] max-h-36">
+                        {JSON.stringify(selectedNode.data, null, 2)}
+                      </CodeBlockContent>
+                    </CodeBlock>
                   </div>
                 </CardContent>
               </Card>
@@ -762,38 +819,22 @@ export default function App() {
                 )}
 
                 {/* Tabs xem 3 định dạng: Banner Output / BiRefNet Transparent / Raw Gemini */}
-                <div className="flex gap-1 bg-[#18181a] p-1 rounded-lg border border-zinc-800 text-xs">
-                  <button
-                    onClick={() => setPreviewTab('output')}
-                    className={`flex-1 py-1.5 px-2.5 rounded-md truncate transition-all duration-200 ease-out font-medium cursor-pointer ${
-                      previewTab === 'output' ? 'bg-zinc-800 text-zinc-100 shadow-sm ring-1 ring-white/5' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
-                    }`}
-                    title={`Banner (${activeJob.width}x${activeJob.height})`}
-                  >
-                    Banner
-                  </button>
-                  <button
-                    onClick={() => setPreviewTab('transparent')}
-                    className={`flex-1 py-1.5 px-2.5 rounded-md truncate transition-all duration-200 ease-out font-medium cursor-pointer ${
-                      previewTab === 'transparent' ? 'bg-zinc-800 text-zinc-100 shadow-sm ring-1 ring-white/5' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
-                    }`}
-                    title="Ảnh tách nền PNG"
-                  >
-                    Tách nền
-                  </button>
-                  <button
-                    onClick={() => setPreviewTab('raw')}
-                    className={`flex-1 py-1.5 px-2.5 rounded-md truncate transition-all duration-200 ease-out font-medium cursor-pointer ${
-                      previewTab === 'raw' ? 'bg-zinc-800 text-zinc-100 shadow-sm ring-1 ring-white/5' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
-                    }`}
-                    title="Ảnh gốc Raw từ Gemini"
-                  >
-                    Ảnh Raw
-                  </button>
-                </div>
+                <Tabs value={previewTab} onValueChange={(v) => setPreviewTab(v as any)} className="w-full">
+                  <TabsList className="w-full">
+                    <TabsTrigger value="output" className="flex-1" title={`Banner (${activeJob.width}x${activeJob.height})`}>
+                      Banner
+                    </TabsTrigger>
+                    <TabsTrigger value="transparent" className="flex-1" title="Ảnh tách nền PNG">
+                      Tách nền
+                    </TabsTrigger>
+                    <TabsTrigger value="raw" className="flex-1" title="Ảnh gốc Raw từ Gemini">
+                      Ảnh Raw
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
 
-                {/* Khung hiển thị ảnh Preview */}
-                <div className={`rounded border border-zinc-800 overflow-hidden min-h-[180px] flex items-center justify-center ${
+                {/* Khung hiển thị ảnh Preview - phẳng, không border thừa */}
+                <div className={`rounded overflow-hidden min-h-[180px] flex items-center justify-center ${
                   previewTab === 'transparent' ? 'checkerboard-bg' : 'bg-zinc-950'
                 }`}>
                   {previewTab === 'output' && activeJob.output_filename && (
@@ -819,7 +860,7 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Các nút tiện ích: Tải về / Mở link trực tiếp */}
+                {/* Các nút tiện ích: Tải về / Mở link trực tiếp - Đồng bộ chung variant="secondary" */}
                 <div className="flex items-center gap-2 pt-1">
                   {activeJob.output_filename && (
                     <a
@@ -839,7 +880,7 @@ export default function App() {
                       download
                       className="flex-1"
                     >
-                      <Button variant="outline" size="sm" className="w-full gap-1.5 text-[11px]">
+                      <Button variant="secondary" size="sm" className="w-full gap-1.5 text-[11px]">
                         <Download className="w-3.5 h-3.5 shrink-0" />
                         <span>Tải PNG Tách Nền</span>
                       </Button>
@@ -853,9 +894,9 @@ export default function App() {
               </Card>
             )}
 
-            {/* Danh sách các lần chạy trước (Execution Run List) */}
+            {/* Danh sách các lần chạy trước (Execution Run List) - Bỏ border-b thô */}
             <div className="space-y-2 pt-2">
-              <div className="flex items-center justify-between text-zinc-400 pb-1 border-b border-zinc-800">
+              <div className="flex items-center justify-between text-zinc-400 pb-1">
                 <span className="font-medium text-[11px] uppercase tracking-wider">{t.historyTitle}</span>
                 <Button variant="ghost" size="icon" onClick={fetchHistory} className="h-6 w-6">
                   <RotateCcw className="w-3 h-3 text-zinc-400" />
@@ -864,14 +905,14 @@ export default function App() {
 
               <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
                 {historyJobs.map((job) => (
-                  <div
+                  <Card
                     key={job.id}
+                    role="button"
+                    tabIndex={0}
+                    variant="solid"
+                    active={activeJob?.id === job.id}
                     onClick={() => setActiveJob(job)}
-                    className={`p-2.5 rounded border transition-colors cursor-pointer flex items-center justify-between ${
-                      activeJob?.id === job.id 
-                        ? 'bg-zinc-800/90 border-zinc-600' 
-                        : 'bg-[#262626] border-zinc-800 hover:border-zinc-700'
-                    }`}
+                    className="p-2.5 rounded transition-colors cursor-pointer flex items-center justify-between"
                   >
                     <div className="truncate pr-2">
                       <p className="font-medium text-zinc-200 truncate text-[11px]">{job.title}</p>
@@ -882,7 +923,7 @@ export default function App() {
                     {job.status === 'completed' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
                     {job.status === 'processing' && <RefreshCw className="w-3.5 h-3.5 text-zinc-400 animate-spin shrink-0" />}
                     {job.status === 'failed' && <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />}
-                  </div>
+                  </Card>
                 ))}
               </div>
             </div>
@@ -914,9 +955,15 @@ export default function App() {
 
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold text-zinc-300">Thông số cấu hình (Config):</label>
-              <pre className="p-3 bg-zinc-950 border border-zinc-800 rounded-md text-[11px] font-mono text-zinc-300 overflow-x-auto max-h-48">
-                {JSON.stringify(inspectedNode.data, null, 2)}
-              </pre>
+              <CodeBlock size="sm" className="max-h-60">
+                <CodeBlockHeader className="py-1 px-3">
+                  <CodeBlockTitle>config.json</CodeBlockTitle>
+                  <CodeBlockCopyButton value={JSON.stringify(inspectedNode.data, null, 2)} />
+                </CodeBlockHeader>
+                <CodeBlockContent className="p-3 text-[11px] max-h-48">
+                  {JSON.stringify(inspectedNode.data, null, 2)}
+                </CodeBlockContent>
+              </CodeBlock>
             </div>
 
             <div className="space-y-1.5">
