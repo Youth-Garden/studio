@@ -7,7 +7,7 @@ echo ========================================================
 
 set SCRIPT_DIR=%~dp0
 set TOOLS_DIR=%SCRIPT_DIR%tools
-set SKILLS_SRC=%SCRIPT_DIR%skills\agent-delegation-workflow
+set SKILLS_SRC=%SCRIPT_DIR%.agents\skills\agent-delegation-workflow
 set MCP_SRC=%SCRIPT_DIR%mcp-config
 
 echo [1/5] Checking environment...

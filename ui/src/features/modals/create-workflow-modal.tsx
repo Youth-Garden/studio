@@ -24,7 +24,7 @@ export function CreateWorkflowModal({
   };
 
   return (
-    <Dialog onDismiss={onDismiss} className="max-w-md bg-[#222225]">
+    <Dialog onDismiss={onDismiss} className="max-w-md bg-[var(--bg-surface)]">
       <DialogHeader>
         <DialogTitle>{t.createNewWorkflow}</DialogTitle>
         <DialogDescription>

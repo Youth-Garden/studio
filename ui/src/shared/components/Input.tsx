@@ -16,16 +16,14 @@ export const Input = React.forwardRef<HTMLInputElement, InputBaseProps>(
         ref={ref}
         data-slot="input"
         className={cn(
-          "flex w-full rounded-lg border-0 bg-[var(--bg-body)] text-[var(--text-primary)] shadow-sm transition-all duration-150",
+          "flex w-full rounded-xl border-0 bg-[var(--bg-body)] text-[var(--text-primary)] shadow-sm transition-all duration-150 outline-none",
           "placeholder:text-[var(--text-secondary)]",
-          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-500",
+          "focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 focus:bg-[var(--bg-card)]",
           "disabled:cursor-not-allowed disabled:opacity-50",
           // Sizes
-          inputSize === "sm" && "h-7 px-2.5 text-[11px]",
-          inputSize === "default" && "h-8 px-3 text-xs",
-          inputSize === "lg" && "h-10 px-3.5 text-sm",
-          // Error states
-          error && "ring-1 ring-rose-500/80 focus-visible:ring-rose-500",
+          inputSize === "sm" && "h-8 px-3 text-[11px]",
+          inputSize === "default" && "h-10 px-3.5 text-xs",
+          inputSize === "lg" && "h-11 px-4 text-sm",
           className
         )}
         {...props}

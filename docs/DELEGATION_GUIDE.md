@@ -8,11 +8,15 @@ A complete, self-contained multi-agent automation toolkit integrating **Architec
 
 ```text
 studio/
+├── .agents/skills/             # Standardized agent skills for Orca / Claude Code
+│   ├── agent-delegation-workflow/
+│   ├── ba-analyst/
+│   ├── be-architect/
+│   └── fe-architect/
 ├── server/                     # FastAPI Backend Gateway & DAG Graph Engine (Port 8000)
 ├── ui/                         # ReactFlow Visual Canvas & Realtime Agent Dispatch Logs (Port 5173)
 ├── storage/                    # Saved workflows, jobs, and dispatch history
 ├── tools/                      # CLI dispatch commands (dispatch_to_agent.js / .cmd)
-├── skills/                     # Standardized agent skills for Orca / Claude Code
 ├── mcp-config/                 # Ready-to-use AkiMCP configuration templates
 ├── setup.bat                   # 1-Click Environment Setup for new computers
 ├── start-all.bat               # 1-Click launch AkiMCP + Studio Flow + Chrome Debug
